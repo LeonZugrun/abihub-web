@@ -26,16 +26,19 @@ import {
   Sparkles,
   ChevronRight,
   MapPin,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Key,
+  CheckCircle2,
+  Filter
 } from 'lucide-react';
 
-// ==========================================
-// TYPEN & MODELLE
-// ==========================================
+// =========================================================================
+// DATENMODELLE & SCHNITTSTELLEN
+// =========================================================================
 interface SubjectGrade {
   id: string;
   name: string;
-  isLk: boolean; // true = 3 LKs (Rheinland-Pfalz MSS)
+  isLk: boolean; // true = LK (in MSS RLP 3 LKs mit 2-facher Wertung)
   h1: number | '';
   h2: number | '';
   h3: number | '';
@@ -45,7 +48,7 @@ interface SubjectGrade {
 interface Post {
   id: number;
   author: string;
-  authorRole: string;
+  authorRole: 'CREATOR_ADMIN' | 'ADMIN' | 'STUDENT';
   avatar: string;
   content: string;
   imageUrl?: string;
@@ -75,24 +78,57 @@ interface ChatMessage {
 
 const AVATARS = ["🎓", "🦁", "🦊", "🚀", "⚡", "🍀", "🦉", "🎨", "👑", "🔥", "🎧", "🥬"];
 
-export default function App() {
+export default function AbiHubApp() {
   const [currentTab, setCurrentTab] = useState<'dashboard' | 'grades' | 'yearbook' | 'events' | 'chat' | 'settings'>('dashboard');
 
-  // Benutzer-Zustand
+  // Benutzer- & Stufen-Zustand
   const [userName, setUserName] = useState<string>('Leon Hillger');
-  const [userRole, setUserRole] = useState<string>('CREATOR_ADMIN');
+  const [userRole, setUserRole] = useState<'CREATOR_ADMIN' | 'ADMIN' | 'STUDENT'>('CREATOR_ADMIN');
   const [userAvatar, setUserAvatar] = useState<string>('🎓');
+  const [isSellerie, setIsSellerie] = useState<boolean>(true); // Sellerie-Modus Feature
   const [joinKey] = useState<string>('ABI-2026-MSS-RP');
-  const [showNotification, setShowNotification] = useState<string | null>(null);
+  const [notification, setNotification] = useState<string | null>(null);
 
   const notify = (msg: string) => {
-    setShowNotification(msg);
-    setTimeout(() => setShowNotification(null), 3000);
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 3200);
   };
 
-  // ==========================================
-  // NOTEN & MSS RLP BERECHNUNG
-  // ==========================================
+  // =========================================================================
+  // PERSISTENZ (LOCALSTORAGE)
+  // =========================================================================
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const savedUser = localStorage.getItem('abihub_user');
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+        setUserName(u.name || 'Leon Hillger');
+        setUserAvatar(u.avatar || '🎓');
+        setIsSellerie(u.isSellerie ?? true);
+      }
+      const savedSubjects = localStorage.getItem('abihub_subjects');
+      if (savedSubjects) setSubjects(JSON.parse(savedSubjects));
+      const savedExams = localStorage.getItem('abihub_exams');
+      if (savedExams) setExamGrades(JSON.parse(savedExams));
+      const savedPosts = localStorage.getItem('abihub_posts');
+      if (savedPosts) setPosts(JSON.parse(savedPosts));
+    } catch (e) {
+      console.error('Laden fehlgeschlagen', e);
+    }
+    setIsLoaded(true);
+  }, []);
+
+  // Automatisches Speichern
+  useEffect(() => {
+    if (!isLoaded) return;
+    localStorage.setItem('abihub_user', JSON.stringify({ name: userName, avatar: userAvatar, isSellerie }));
+  }, [userName, userAvatar, isSellerie, isLoaded]);
+
+  // =========================================================================
+  // NOTEN & MSS RHEINLAND-PFALZ RECHNER
+  // =========================================================================
   const [subjects, setSubjects] = useState<SubjectGrade[]>([
     { id: '1', name: 'Mathematik', isLk: true, h1: 13, h2: 12, h3: 14, h4: 13 },
     { id: '2', name: 'Physik', isLk: true, h1: 14, h2: 14, h3: 15, h4: 14 },
@@ -105,76 +141,71 @@ export default function App() {
   ]);
 
   const [examGrades, setExamGrades] = useState({
-    p1: 13, // LK 1 schriftlich
-    p2: 14, // LK 2 schriftlich
-    p3: 12, // LK 3 schriftlich
-    p4: 11, // GK mündlich / schriftlich
-    p5: 12  // GK mündlich
+    p1: 13, // 1. LK
+    p2: 14, // 2. LK
+    p3: 12, // 3. LK
+    p4: 11, // 4. Fach
+    p5: 12  // 5. mündlich
   });
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    localStorage.setItem('abihub_subjects', JSON.stringify(subjects));
+    localStorage.setItem('abihub_exams', JSON.stringify(examGrades));
+  }, [subjects, examGrades, isLoaded]);
 
   const [showAddSubject, setShowAddSubject] = useState(false);
   const [newSubName, setNewSubName] = useState('');
   const [newSubIsLk, setNewSubIsLk] = useState(false);
 
-  // MSS RLP Auswertung
-  const mssEvaluation = useMemo(() => {
-    let lkSum = 0;
-    let lkCount = 0;
+  // MSS RLP Berechnungsauswertung
+  const mss = useMemo(() => {
+    let lkPoints = 0;
     let lkDeficits = 0;
-
-    let gkSum = 0;
-    let gkCount = 0;
+    let gkPoints = 0;
     let gkDeficits = 0;
 
-    subjects.forEach(s => {
-      [s.h1, s.h2, s.h3, s.h4].forEach(val => {
+    subjects.forEach(sub => {
+      [sub.h1, sub.h2, sub.h3, sub.h4].forEach(val => {
         if (typeof val === 'number') {
-          if (s.isLk) {
-            lkSum += val * 2; // In RLP MSS LKs doppelt gewertet
-            lkCount++;
+          if (sub.isLk) {
+            lkPoints += val * 2; // RLP: 3 LKs doppelt gewertet
             if (val < 5) lkDeficits++;
           } else {
-            gkSum += val;
-            gkCount++;
+            gkPoints += val;
             if (val < 5) gkDeficits++;
           }
         }
       });
     });
 
-    const block1Total = lkSum + gkSum;
-    const block2Total = (examGrades.p1 + examGrades.p2 + examGrades.p3 + examGrades.p4 + examGrades.p5) * 4;
-    const totalPoints = block1Total + block2Total;
+    const block1 = Math.min(600, lkPoints + gkPoints);
+    const block2 = Math.min(300, (examGrades.p1 + examGrades.p2 + examGrades.p3 + examGrades.p4 + examGrades.p5) * 4);
+    const totalPoints = block1 + block2;
 
-    // KMK Formel
+    // KMK-Berechnungsschlüssel
     let grade = "1.0";
     if (totalPoints >= 823) grade = "1.0";
     else if (totalPoints <= 300) grade = "4.0";
     else {
-      const val = (17 / 3) - (totalPoints / 180);
-      grade = Math.max(1.0, Math.min(4.0, val)).toFixed(1);
+      const g = (17 / 3) - (totalPoints / 180);
+      grade = Math.max(1.0, Math.min(4.0, g)).toFixed(1);
     }
 
-    return {
-      block1: block1Total,
-      block2: block2Total,
-      totalPoints,
-      grade,
-      lkDeficits,
-      gkDeficits,
-      totalDeficits: lkDeficits + gkDeficits,
-      isPassed: block1Total >= 200 && block2Total >= 100 && lkDeficits <= 3 && (lkDeficits + gkDeficits) <= 7
-    };
+    const totalDeficits = lkDeficits + gkDeficits;
+    const isPassed = block1 >= 200 && block2 >= 100 && lkDeficits <= 3 && totalDeficits <= 7;
+
+    return { block1, block2, totalPoints, grade, lkDeficits, gkDeficits, totalDeficits, isPassed };
   }, [subjects, examGrades]);
 
-  // ==========================================
+  // =========================================================================
   // PINNWAND & FEIERMOMENTE
-  // ==========================================
+  // =========================================================================
   const [posts, setPosts] = useState<Post[]>([
     {
       id: 1,
       author: 'Dr. Weber (Physik LK)',
-      authorRole: 'Lehrer',
+      authorRole: 'ADMIN',
       avatar: '🦉',
       content: '„Wenn das Pendel heute nicht schwingt, verschieben wir die Gravitation auf nächste Woche!“',
       category: 'Zitate',
@@ -186,36 +217,47 @@ export default function App() {
     {
       id: 2,
       author: 'Leon Hillger',
-      authorRole: 'Ersteller',
+      authorRole: 'CREATOR_ADMIN',
       avatar: '🎓',
       content: 'Die Planung für den Abistreich 2026 steht! Treffen für alle Helfer am Freitag nach der 6. Stunde in der Aula.',
       category: 'Ankündigung',
       votesCount: 12,
-      votedUserIds: ['me'],
+      votedUserIds: ['user_me'],
       isSelectedForPrint: true,
       date: 'Heute, 10:15'
     }
   ]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    localStorage.setItem('abihub_posts', JSON.stringify(posts));
+  }, [posts, isLoaded]);
+
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostCategory, setNewPostCategory] = useState('Zitate');
   const [newPostImage, setNewPostImage] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
+  const [onlyPrintSelected, setOnlyPrintSelected] = useState<boolean>(false);
 
+  // 1-Klick-Toggle Stimmabgabe pro Beitrag
   const toggleUpvote = (postId: number) => {
     setPosts(prev => prev.map(p => {
       if (p.id === postId) {
-        const hasVoted = p.votedUserIds.includes('me');
+        const hasVoted = p.votedUserIds.includes('user_me');
+        const newVotedList = hasVoted
+          ? p.votedUserIds.filter(id => id !== 'user_me')
+          : [...p.votedUserIds, 'user_me'];
         return {
           ...p,
-          votesCount: hasVoted ? p.votesCount - 1 : p.votesCount + 1,
-          votedUserIds: hasVoted ? p.votedUserIds.filter(id => id !== 'me') : [...p.votedUserIds, 'me']
+          votesCount: newVotedList.length,
+          votedUserIds: newVotedList
         };
       }
       return p;
     }));
   };
 
-  const togglePrintBookmark = (postId: number) => {
+  const togglePrintStatus = (postId: number) => {
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, isSelectedForPrint: !p.isSelectedForPrint } : p));
     notify('Druck-Markierung für das Abibuch aktualisiert!');
   };
@@ -226,7 +268,7 @@ export default function App() {
     const newEntry: Post = {
       id: Date.now(),
       author: userName,
-      authorRole: userRole === 'CREATOR_ADMIN' ? 'Ersteller' : 'Schüler',
+      authorRole: userRole,
       avatar: userAvatar,
       content: newPostContent,
       imageUrl: newPostImage || undefined,
@@ -239,13 +281,13 @@ export default function App() {
     setPosts([newEntry, ...posts]);
     setNewPostContent('');
     setNewPostImage(null);
-    notify('Beitrag erfolgreich auf der Pinnwand geteilt!');
+    notify('Beitrag erfolgreich veröffentlicht!');
   };
 
-  // ==========================================
-  // TERMINE & FERIEN (RLP)
-  // ==========================================
-  const [events, setEvents] = useState<CalendarEvent[]>([
+  // =========================================================================
+  // TERMINE & FERIEN (RLP OHNE PFINGSTFERIEN)
+  // =========================================================================
+  const [events] = useState<CalendarEvent[]>([
     { id: '1', title: 'Abiturprüfung Mathematik (LK)', date: '2026-04-28', location: 'Turnhalle', isExam: true },
     { id: '2', title: 'Abiturprüfung Deutsch', date: '2026-05-04', location: 'Aula', isExam: true },
     { id: '3', title: 'Abistreich & Mottowoche', date: '2026-06-12', location: 'Schulhof', isExam: false },
@@ -259,9 +301,9 @@ export default function App() {
     { title: 'Sommerferien RLP', dates: '28.06.2027 – 06.08.2027', emoji: '🏖️' }
   ];
 
-  // ==========================================
+  // =========================================================================
   // STUFENCHAT
-  // ==========================================
+  // =========================================================================
   const [messages, setMessages] = useState<ChatMessage[]>([
     { id: '1', sender: 'Sophie Müller', avatar: '🎨', text: 'Hey alle! Wer hat die Zusammenfassung für Geschichte MSS 12?', time: '09:41', isMe: false },
     { id: '2', sender: 'Leon Hillger', avatar: '🎓', text: 'Hab sie eben im AbiHub hochgeladen!', time: '09:44', isMe: true }
@@ -285,35 +327,31 @@ export default function App() {
     setChatInput('');
   };
 
-  // ==========================================
-  // COUNTDOWN RECHNER
-  // ==========================================
   const daysUntilAbi = useMemo(() => {
     const target = new Date('2026-04-28').getTime();
     const now = new Date().getTime();
-    const diff = target - now;
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+    return Math.max(0, Math.ceil((target - now) / (1000 * 60 * 60 * 24)));
   }, []);
 
   return (
     <div className="min-h-screen bg-[#0B1120] text-slate-100 pb-28">
       {/* Toast Notification */}
-      {showNotification && (
+      {notification && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2 border border-blue-400/30 animate-bounce">
           <Sparkles className="w-4 h-4 text-amber-300" />
-          {showNotification}
+          {notification}
         </div>
       )}
 
       {/* Haupt-Container */}
       <main className="max-w-2xl mx-auto px-4 pt-6">
 
-        {/* ==================================================== */}
-        {/* TAB: DASHBOARD (ÜBERSICHT) */}
-        {/* ==================================================== */}
+        {/* ========================================================================= */}
+        {/* TAB 1: ÜBERSICHT (DASHBOARD) */}
+        {/* ========================================================================= */}
         {currentTab === 'dashboard' && (
           <div className="space-y-5 animate-fadeIn">
-            {/* Header Profil Card */}
+            {/* Überarbeitete Profil-Card */}
             <div className="bg-[#131E35] border border-slate-800/80 rounded-2xl p-4 shadow-xl flex items-center justify-between">
               <div className="flex items-center gap-3.5">
                 <button
@@ -324,9 +362,9 @@ export default function App() {
                 </button>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-base font-bold text-white leading-none">{userName}</h2>
+                    <h2 className="text-base font-bold text-white leading-none">Hallo, {userName}!</h2>
                     {userRole === 'CREATOR_ADMIN' && (
-                      <span className="bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                      <span className="bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1">
                         👑 Ersteller
                       </span>
                     )}
@@ -336,15 +374,12 @@ export default function App() {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(joinKey);
-                  notify(`Zugangsschlüssel kopiert: ${joinKey}`);
-                }}
-                className="bg-[#1A2744] hover:bg-[#203257] border border-slate-700/60 text-amber-300 text-xs font-mono font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5"
-              >
-                🔑 {joinKey}
-              </button>
+
+              {isSellerie && (
+                <div className="bg-[#1B5E20] border border-[#4CAF50]/60 text-[#81C784] text-xs font-bold px-2.5 py-1 rounded-xl shadow-sm flex items-center gap-1">
+                  🥬 Sellerie
+                </div>
+              )}
             </div>
 
             {/* Countdown Banner */}
@@ -366,7 +401,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Noten- & Schnitt Vorschau Widget */}
+            {/* Noten- & MSS-Schnitt Widget */}
             <div
               onClick={() => setCurrentTab('grades')}
               className="bg-[#131E35] border border-slate-800 rounded-2xl p-5 shadow-lg cursor-pointer hover:border-blue-500/50 transition group"
@@ -375,34 +410,34 @@ export default function App() {
                 <div>
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Dein Abiturschnitt (MSS RLP)</span>
                   <div className="text-5xl font-black text-white mt-1 group-hover:text-blue-400 transition">
-                    {mssEvaluation.grade}
+                    {mss.grade}
                   </div>
                 </div>
-                <div className="bg-blue-900/40 text-blue-300 border border-blue-500/30 text-xs font-bold px-3 py-1.5 rounded-xl">
-                  {mssEvaluation.totalPoints} / 900 Pkt
+                <div className="bg-slate-800 border border-slate-700 text-blue-300 text-xs font-semibold px-3 py-1.5 rounded-xl">
+                  {mss.totalPoints} / 900 Pkt
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-slate-800 text-xs">
                 <div className="bg-[#0D1527] p-2.5 rounded-xl border border-slate-800">
                   <div className="text-slate-400">Block I (Halbjahre)</div>
-                  <div className="text-sm font-bold text-blue-400 mt-0.5">{mssEvaluation.block1} / 600 Pkt</div>
+                  <div className="text-sm font-bold text-blue-400 mt-0.5">{mss.block1} / 600 Pkt</div>
                 </div>
                 <div className="bg-[#0D1527] p-2.5 rounded-xl border border-slate-800">
                   <div className="text-slate-400">Unterkurse (&lt; 05 Pkt)</div>
-                  <div className={`text-sm font-bold mt-0.5 ${mssEvaluation.totalDeficits <= 7 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {mssEvaluation.totalDeficits} / 7 erlaubt
+                  <div className={`text-sm font-bold mt-0.5 ${mss.totalDeficits <= 7 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {mss.totalDeficits} / 7 erlaubt {mss.lkDeficits > 3 && '⚠️ Zu viele LK'}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Quick Action Buttons */}
+            {/* Schnellnavigation */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: 'Noten', icon: GraduationCap, tab: 'grades', color: 'text-blue-400' },
-                { label: 'Pinnwand', icon: BookOpen, tab: 'yearbook', color: 'text-amber-400' },
-                { label: 'Termine', icon: CalendarDays, tab: 'events', color: 'text-emerald-400' },
+                { label: 'MSS Noten', icon: GraduationCap, tab: 'grades', color: 'text-blue-400' },
+                { label: isSellerie ? 'Sellerie-Momente' : 'Abizeitung', icon: BookOpen, tab: 'yearbook', color: 'text-amber-400' },
+                { label: 'Termine & Ferien', icon: CalendarDays, tab: 'events', color: 'text-emerald-400' },
                 { label: 'Stufenchat', icon: MessageSquare, tab: 'chat', color: 'text-purple-400' }
               ].map(item => (
                 <button
@@ -415,35 +450,12 @@ export default function App() {
                 </button>
               ))}
             </div>
-
-            {/* Letzte Pinnwand-Beiträge Preview */}
-            <div className="bg-[#131E35] border border-slate-800 rounded-2xl p-5 shadow-lg">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-amber-400" /> Neueste Abizeitung-Einträge
-                </h3>
-                <button onClick={() => setCurrentTab('yearbook')} className="text-xs text-blue-400 font-semibold hover:underline">
-                  Alle ansehen
-                </button>
-              </div>
-              <div className="space-y-2.5">
-                {posts.slice(0, 2).map(p => (
-                  <div key={p.id} className="bg-[#0D1527] p-3 rounded-xl border border-slate-800 text-xs">
-                    <div className="flex justify-between font-bold text-slate-300 mb-1">
-                      <span>{p.avatar} {p.author}</span>
-                      <span className="text-amber-400">👍 {p.votesCount}</span>
-                    </div>
-                    <p className="text-slate-400 line-clamp-2">{p.content}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         )}
 
-        {/* ==================================================== */}
-        {/* TAB: NOTENRECHNER (MSS RLP) */}
-        {/* ==================================================== */}
+        {/* ========================================================================= */}
+        {/* TAB 2: NOTEN & MSS RLP RECHNER */}
+        {/* ========================================================================= */}
         {currentTab === 'grades' && (
           <div className="space-y-5 animate-fadeIn">
             <div className="bg-gradient-to-br from-blue-900/60 via-[#131E35] to-[#131E35] border border-blue-500/30 rounded-3xl p-6 shadow-2xl">
@@ -451,24 +463,24 @@ export default function App() {
                 <div>
                   <span className="text-xs font-bold text-blue-300 uppercase tracking-widest">Abiturschnitt (Rheinland-Pfalz)</span>
                   <div className="text-6xl font-black text-white mt-1 tracking-tight">
-                    {mssEvaluation.grade}
+                    {mss.grade}
                   </div>
                 </div>
-                <div className="bg-blue-600/30 text-blue-300 border border-blue-400/40 text-xs font-bold px-3 py-1.5 rounded-xl">
-                  MSS (3 LKs doppelt)
+                <div className="bg-slate-800/90 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold">
+                  MSS (Mainzer Studienstufe)
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-slate-800">
                 <div>
                   <span className="text-xs text-slate-400">Gesamtpunkte</span>
-                  <div className="text-xl font-bold text-amber-400">{mssEvaluation.totalPoints} / 900 Pkt</div>
+                  <div className="text-xl font-bold text-amber-400">{mss.totalPoints} / 900 Pkt</div>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-400">Status</span>
-                  <div className={`text-sm font-bold flex items-center gap-1 mt-1 ${mssEvaluation.isPassed ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {mssEvaluation.isPassed ? <Check className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-                    {mssEvaluation.isPassed ? 'Bestanden' : 'Gefährdet'}
+                  <span className="text-xs text-slate-400">Prüfungsstatus</span>
+                  <div className={`text-sm font-bold flex items-center gap-1 mt-1 ${mss.isPassed ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {mss.isPassed ? <Check className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+                    {mss.isPassed ? 'Zulassung erreicht' : 'Unterkurse überschritten'}
                   </div>
                 </div>
               </div>
@@ -479,27 +491,26 @@ export default function App() {
               <div className="flex justify-between items-center">
                 <div>
                   <h3 className="text-base font-bold text-white">Halbjahresnoten (MSS 11 & 12)</h3>
-                  <p className="text-xs text-slate-400">Punkte von 00 bis 15 pro Halbjahr eingeben</p>
+                  <p className="text-xs text-slate-400">Punkte von 00 bis 15 (3 LKs doppelt gewertet)</p>
                 </div>
                 <button
                   onClick={() => setShowAddSubject(true)}
                   className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 transition"
                 >
-                  <Plus className="w-3.5 h-3.5" /> Fach hinzufügen
+                  <Plus className="w-3.5 h-3.5" /> Fach anlegen
                 </button>
               </div>
 
-              {/* Fach hinzufügen Dialog */}
               {showAddSubject && (
                 <div className="bg-[#0D1527] border border-blue-500/40 p-4 rounded-2xl space-y-3 animate-fadeIn">
-                  <h4 className="text-xs font-bold text-blue-300 uppercase">Neues Fach anlegen</h4>
+                  <h4 className="text-xs font-bold text-blue-300 uppercase">Neues Fach</h4>
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="z. B. Französisch"
+                      placeholder="z. B. Spanisch"
                       value={newSubName}
                       onChange={e => setNewSubName(e.target.value)}
-                      className="flex-1 bg-[#131E35] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                      className="flex-1 bg-[#131E35] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
                     />
                     <button
                       type="button"
@@ -517,11 +528,11 @@ export default function App() {
                         setSubjects([...subjects, { id: Date.now().toString(), name: newSubName, isLk: newSubIsLk, h1: 11, h2: 11, h3: 11, h4: 11 }]);
                         setNewSubName('');
                         setShowAddSubject(false);
-                        notify('Fach hinzugefügt!');
+                        notify('Fach angelegt!');
                       }}
                       className="bg-blue-600 text-white text-xs font-bold px-4 py-1.5 rounded-xl"
                     >
-                      Speichern
+                      Hinzufügen
                     </button>
                   </div>
                 </div>
@@ -539,7 +550,7 @@ export default function App() {
                     </div>
 
                     <div className="grid grid-cols-4 gap-1.5 flex-1 max-w-[200px]">
-                      {(['h1', 'h2', 'h3', 'h4'] as const).map((h, i) => (
+                      {(['h1', 'h2', 'h3', 'h4'] as const).map((h) => (
                         <input
                           key={h}
                           type="number"
@@ -568,10 +579,10 @@ export default function App() {
               </div>
             </div>
 
-            {/* Prüfungsfächer Block II */}
+            {/* Block II Abiturprüfungen */}
             <div className="bg-[#131E35] border border-slate-800 rounded-2xl p-5 shadow-lg space-y-3">
               <h3 className="text-base font-bold text-white">Block II (Abiturprüfungen)</h3>
-              <p className="text-xs text-slate-400">Ergebnisse der 5 Abiturprüfungen (je 4-fach gewertet)</p>
+              <p className="text-xs text-slate-400">5 Prüfungsfächer (je 4-fach gewertet)</p>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-2">
                 {[
                   { key: 'p1', label: '1. LK' },
@@ -597,20 +608,66 @@ export default function App() {
           </div>
         )}
 
-        {/* ==================================================== */}
-        {/* TAB: PINNWAND & FEIERMOMENTE (YEARBOOK) */}
-        {/* ==================================================== */}
+        {/* ========================================================================= */}
+        {/* TAB 3: PINNWAND (MIT SCROLLBAREM HEADER & 1-KLICK UPVOTES) */}
+        {/* ========================================================================= */}
         {currentTab === 'yearbook' && (
-          <div className="space-y-5 animate-fadeIn">
-            {/* Header Banner */}
-            <div className="bg-gradient-to-r from-amber-500/20 via-blue-600/20 to-indigo-600/20 border border-slate-800 rounded-2xl p-5 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/30 border border-amber-400/40 flex items-center justify-center text-2xl">
-                📖
+          <div className="space-y-4 animate-fadeIn">
+            {/* Header Banner (scrollt natürlich mit) */}
+            <div className="bg-gradient-to-r from-blue-600/10 via-amber-500/10 to-indigo-600/10 border border-slate-800 rounded-2xl p-5 flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-md ${
+                isSellerie ? 'bg-[#1B5E20] border border-[#4CAF50]/60' : 'bg-blue-600'
+              }`}>
+                {isSellerie ? '🥬' : '📖'}
               </div>
               <div>
-                <h2 className="text-base font-bold text-white">Abizeitung & Momente</h2>
-                <p className="text-xs text-slate-400">Sammelt Zitate, Geschichten und Fotos für das gedruckte Abibuch!</p>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-white">
+                    {isSellerie ? 'Sellerie-Momente' : 'Abizeitung & Momente'}
+                  </h2>
+                  {isSellerie && (
+                    <span className="bg-[#1B5E20] border border-[#4CAF50]/60 text-[#81C784] text-[10px] font-bold px-2 py-0.5 rounded-md">
+                      🥬 Sellerie
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">Sammelt Texte, Erinnerungen & Fotos für das gedruckte Abibuch!</p>
               </div>
+            </div>
+
+            {/* Filter-Chips (scrollen mit) */}
+            <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 no-scrollbar">
+              <div className="flex gap-2">
+                {[
+                  { id: 'ALL', label: 'Alle Beiträge' },
+                  { id: 'Zitate', label: '🗣️ Zitate' },
+                  { id: 'Lehrer', label: '👨‍🏫 Lehrer' },
+                  { id: 'Kursfahrten', label: '🚌 Kursfahrten' }
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setFilterCategory(f.id)}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-xl whitespace-nowrap transition border ${
+                      filterCategory === f.id
+                        ? 'bg-blue-600 text-white border-blue-500'
+                        : 'bg-[#131E35] text-slate-400 border-slate-800 hover:text-white'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setOnlyPrintSelected(!onlyPrintSelected)}
+                className={`text-xs font-bold px-3 py-1.5 rounded-xl whitespace-nowrap transition border flex items-center gap-1 ${
+                  onlyPrintSelected
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
+                    : 'bg-[#131E35] text-slate-400 border-slate-800'
+                }`}
+              >
+                <Bookmark className="w-3.5 h-3.5" /> Nur Abibuch
+              </button>
             </div>
 
             {/* Beitrag verfassen */}
@@ -618,7 +675,7 @@ export default function App() {
               <textarea
                 value={newPostContent}
                 onChange={e => setNewPostContent(e.target.value)}
-                placeholder="Lustiges Zitat, Anekdote oder Moment aus dem Unterricht..."
+                placeholder="Teile Erinnerungen, Sprüche oder Zitate..."
                 rows={3}
                 className="w-full bg-[#0D1527] border border-slate-700/60 rounded-xl p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none transition"
               />
@@ -636,8 +693,7 @@ export default function App() {
                     <option value="Ankündigung">📢 Ankündigung</option>
                   </select>
 
-                  {/* Foto-Upload */}
-                  <label className="cursor-pointer bg-[#0D1527] border border-slate-700 hover:border-slate-500 text-xs font-semibold text-slate-300 px-3 py-2 rounded-xl flex items-center gap-1.5 transition">
+                  <label className="cursor-pointer bg-[#0D1527] border border-slate-700 text-xs font-semibold text-slate-300 px-3 py-2 rounded-xl flex items-center gap-1.5 transition">
                     <ImageIcon className="w-3.5 h-3.5 text-blue-400" />
                     <span>{newPostImage ? 'Foto gewählt' : 'Foto'}</span>
                     <input
@@ -647,9 +703,9 @@ export default function App() {
                       onChange={e => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          const reader = new FileReader();
-                          reader.onload = () => setNewPostImage(reader.result as string);
-                          reader.readAsDataURL(file);
+                          const r = new FileReader();
+                          r.onload = () => setNewPostImage(r.result as string);
+                          r.readAsDataURL(file);
                         }
                       }}
                     />
@@ -660,39 +716,23 @@ export default function App() {
                   type="submit"
                   className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition shadow-md"
                 >
-                  <Plus className="w-4 h-4" /> Posten
+                  <Plus className="w-4 h-4" /> Veröffentlichen
                 </button>
               </div>
             </form>
 
-            {/* Filter-Kategorien */}
-            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-              {['ALL', 'Zitate', 'Lehrer', 'Kursfahrten', 'Ankündigung'].map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setFilterCategory(cat)}
-                  className={`text-xs font-bold px-3 py-1.5 rounded-xl whitespace-nowrap transition border ${
-                    filterCategory === cat
-                      ? 'bg-blue-600 text-white border-blue-500'
-                      : 'bg-[#131E35] text-slate-400 border-slate-800 hover:text-white'
-                  }`}
-                >
-                  {cat === 'ALL' ? 'Alle Beiträge' : cat}
-                </button>
-              ))}
-            </div>
-
             {/* Beiträge Liste */}
-            <div className="space-y-4">
+            <div className="space-y-3.5">
               {posts
                 .filter(p => filterCategory === 'ALL' || p.category === filterCategory)
+                .filter(p => !onlyPrintSelected || p.isSelectedForPrint)
                 .map(post => {
-                  const hasVoted = post.votedUserIds.includes('me');
+                  const hasVoted = post.votedUserIds.includes('user_me');
                   return (
                     <div key={post.id} className="bg-[#131E35] border border-slate-800/80 rounded-2xl p-5 shadow-lg space-y-3 relative">
                       {post.isSelectedForPrint && (
                         <div className="absolute top-4 right-4 bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Bookmark className="w-3 h-3 fill-amber-400" /> Fürs Abibuch
+                          <Bookmark className="w-3 h-3 fill-amber-400" /> Fürs Abibuch markiert
                         </div>
                       )}
 
@@ -712,11 +752,11 @@ export default function App() {
                       <p className="text-sm text-slate-200 leading-relaxed">{post.content}</p>
 
                       {post.imageUrl && (
-                        <img src={post.imageUrl} alt="Upload" className="w-full max-h-72 object-cover rounded-xl border border-slate-800" />
+                        <img src={post.imageUrl} alt="Foto" className="w-full max-h-72 object-cover rounded-xl border border-slate-800" />
                       )}
 
                       <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
-                        {/* 1-Klick Upvote Toggle Button */}
+                        {/* 1-Klick Toggle Stimmabgabe */}
                         <button
                           onClick={() => toggleUpvote(post.id)}
                           className={`text-xs font-bold px-3.5 py-1.5 rounded-xl border flex items-center gap-1.5 transition ${
@@ -726,11 +766,11 @@ export default function App() {
                           }`}
                         >
                           <ThumbsUp className={`w-3.5 h-3.5 ${hasVoted ? 'fill-white' : ''}`} />
-                          <span>{post.votesCount} {post.votesCount === 1 ? 'Stimme' : 'Stimmen'}</span>
+                          <span>{post.votesCount === 1 ? '1 Stimme' : `${post.votesCount} Stimmen`}</span>
                         </button>
 
                         <button
-                          onClick={() => togglePrintBookmark(post.id)}
+                          onClick={() => togglePrintStatus(post.id)}
                           className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition flex items-center gap-1.5 ${
                             post.isSelectedForPrint
                               ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
@@ -748,16 +788,16 @@ export default function App() {
           </div>
         )}
 
-        {/* ==================================================== */}
-        {/* TAB: TERMINE & FERIEN (EVENTS) */}
-        {/* ==================================================== */}
+        {/* ========================================================================= */}
+        {/* TAB 4: TERMINE & SCHULFERIEN (RLP) */}
+        {/* ========================================================================= */}
         {currentTab === 'events' && (
           <div className="space-y-5 animate-fadeIn">
             <div className="bg-[#131E35] border border-slate-800 rounded-2xl p-5 shadow-lg">
               <h3 className="text-base font-bold text-white mb-1 flex items-center gap-2">
-                <CalendarDays className="w-5 h-5 text-emerald-400" /> Wichtige Prüfungstermine & Events
+                <CalendarDays className="w-5 h-5 text-emerald-400" /> Prüfungstermine & Events 2026
               </h3>
-              <p className="text-xs text-slate-400 mb-4">Abiturprüfungen, Mottowoche, Abiball und Meilensteine</p>
+              <p className="text-xs text-slate-400 mb-4">Abiturprüfungen, Mottowoche und Abiball</p>
 
               <div className="space-y-2.5">
                 {events.map(ev => (
@@ -782,12 +822,12 @@ export default function App() {
               </div>
             </div>
 
-            {/* Schulferien Rheinland-Pfalz */}
+            {/* Offizielle Ferien Rheinland-Pfalz (OHNE PFINGSTFERIEN) */}
             <div className="bg-[#131E35] border border-slate-800 rounded-2xl p-5 shadow-lg">
               <h3 className="text-base font-bold text-white mb-1 flex items-center gap-2">
                 <span>🏖️</span> Schulferien 2026/2027 (Rheinland-Pfalz)
               </h3>
-              <p className="text-xs text-slate-400 mb-3">Offizielle Ferientermine (keine Pfingstferien in RLP)</p>
+              <p className="text-xs text-slate-400 mb-3">Offizieller Kalender (RLP hat keine Pfingstferien)</p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {rlpSchoolHolidays.map(h => (
@@ -804,22 +844,21 @@ export default function App() {
           </div>
         )}
 
-        {/* ==================================================== */}
-        {/* TAB: STUFENCHAT */}
-        {/* ==================================================== */}
+        {/* ========================================================================= */}
+        {/* TAB 5: STUFENCHAT */}
+        {/* ========================================================================= */}
         {currentTab === 'chat' && (
           <div className="bg-[#131E35] border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col h-[70vh] animate-fadeIn">
             <div className="border-b border-slate-800 pb-3 mb-3 flex justify-between items-center">
               <div>
                 <h3 className="text-sm font-bold text-white">Stufenchat Abi 2026</h3>
-                <p className="text-[11px] text-slate-400">Gemeinsam organisieren, Fragen stellen & austauschen</p>
+                <p className="text-[11px] text-slate-400">Jahrgangsinterner Austausch & Absprachen</p>
               </div>
               <span className="text-xs bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded-full">
-                Live
+                Aktiv
               </span>
             </div>
 
-            {/* Chat Nachrichten */}
             <div className="flex-1 overflow-y-auto space-y-3 pr-1">
               {messages.map(m => (
                 <div key={m.id} className={`flex gap-2.5 ${m.isMe ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -837,13 +876,12 @@ export default function App() {
               ))}
             </div>
 
-            {/* Input Form */}
             <form onSubmit={sendChatMessage} className="pt-3 border-t border-slate-800 flex gap-2">
               <input
                 type="text"
                 value={chatInput}
                 onChange={e => setChatInput(e.target.value)}
-                placeholder="Nachricht an den Jahrgang..."
+                placeholder="Nachricht an die Stufe schreiben..."
                 className="flex-1 bg-[#0D1527] border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
               />
               <button
@@ -856,14 +894,14 @@ export default function App() {
           </div>
         )}
 
-        {/* ==================================================== */}
-        {/* TAB: EINSTELLUNGEN & PROFIL */}
-        {/* ==================================================== */}
+        {/* ========================================================================= */}
+        {/* TAB 6: EINSTELLUNGEN & PROFIL */}
+        {/* ========================================================================= */}
         {currentTab === 'settings' && (
           <div className="space-y-5 animate-fadeIn">
             <div className="bg-[#131E35] border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <User className="w-4 h-4 text-blue-400" /> Profil & Avatar anpassen
+                <User className="w-4 h-4 text-blue-400" /> Profil & Avatar
               </h3>
 
               <div>
@@ -892,23 +930,39 @@ export default function App() {
                   ))}
                 </div>
               </div>
+
+              <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-slate-200">Sellerie-Modus</span>
+                  <p className="text-[11px] text-slate-400">Aktiviert das grüne Sellerie-Badge und die Sellerie-Momente</p>
+                </div>
+                <button
+                  onClick={() => setIsSellerie(!isSellerie)}
+                  className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition ${
+                    isSellerie ? 'bg-[#1B5E20] text-[#81C784] border-[#4CAF50]/60' : 'bg-slate-800 text-slate-400 border-slate-700'
+                  }`}
+                >
+                  {isSellerie ? 'Aktiv 🥬' : 'Aus'}
+                </button>
+              </div>
             </div>
 
+            {/* Zugangsschlüssel */}
             <div className="bg-[#131E35] border border-slate-800 rounded-2xl p-5 shadow-lg space-y-3">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Shield className="w-4 h-4 text-amber-400" /> Stufen-Zugangsschlüssel
               </h3>
               <p className="text-xs text-slate-400">
-                Teile diesen Schlüssel mit deinen Mitschülern, damit sie der Stufe beitreten können:
+                Teile diesen Schlüssel mit deinen Mitschülern, damit sie deinem Jahrgang beitreten können:
               </p>
               <div className="flex items-center justify-between bg-[#0D1527] p-3 rounded-xl border border-slate-800">
                 <span className="font-mono text-sm font-bold text-amber-300">{joinKey}</span>
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(joinKey);
-                    notify('Schlüssel kopiert!');
+                    notify('Zugangsschlüssel kopiert!');
                   }}
-                  className="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg"
+                  className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition"
                 >
                   Kopieren
                 </button>
@@ -919,15 +973,15 @@ export default function App() {
 
       </main>
 
-      {/* ==================================================== */}
+      {/* ========================================================================= */}
       {/* UNTERE NAVIGATION BAR (FIXIERT) */}
-      {/* ==================================================== */}
+      {/* ========================================================================= */}
       <nav className="fixed bottom-0 left-0 right-0 bg-[#0D1527]/95 backdrop-blur-md border-t border-slate-800/80 px-4 py-2 z-40">
         <div className="max-w-md mx-auto flex items-center justify-between">
           {[
             { id: 'dashboard', label: 'Übersicht', icon: LayoutDashboard },
             { id: 'grades', label: 'MSS Noten', icon: GraduationCap },
-            { id: 'yearbook', label: 'Abizeitung', icon: BookOpen },
+            { id: 'yearbook', label: isSellerie ? 'Momente' : 'Abizeitung', icon: BookOpen },
             { id: 'events', label: 'Termine', icon: CalendarDays },
             { id: 'chat', label: 'Chat', icon: MessageSquare }
           ].map(item => {
