@@ -1033,16 +1033,21 @@ export default function AbiHubApp() {
                 <p className="text-[11px] font-bold text-white mb-2">App-Modus</p>
                 <div className="flex gap-2">
                   {[
-                    {id: 'dark', i: Moon, l: 'Dark', bg: 'bg-purple-600 border-purple-500 text-white'},
-                    {id: 'light', i: Sun, l: 'Light', bg: 'bg-transparent border-slate-700 text-slate-400'},
-                    {id: 'system', i: Monitor, l: 'System', bg: 'bg-transparent border-slate-700 text-slate-400'},
-                    {id: 'sellerie', i: Leaf, l: 'Sellerie', bg: 'bg-transparent border-slate-700 text-slate-400'}
-                  ].map(m => (
-                    <button key={m.id} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-xl border ${m.id === appMode ? m.bg : 'bg-transparent border-slate-700 text-slate-400'}`}>
+                    {id: 'dark', i: Moon, l: 'Dark'},
+                    {id: 'light', i: Sun, l: 'Light'},
+                    {id: 'system', i: Monitor, l: 'System'},
+                    {id: 'sellerie', i: Leaf, l: 'Sellerie'}
+                  ].map(m => {
+                    const isActive = m.id === appMode;
+                    const activeBgMap = {blue: 'bg-blue-600 border-blue-500', red: 'bg-red-600 border-red-500', purple: 'bg-purple-600 border-purple-500', orange: 'bg-orange-500 border-orange-400', green: 'bg-emerald-600 border-emerald-500', pink: 'bg-pink-600 border-pink-500'};
+                    const activeBg = (activeBgMap as any)[accentColor] || 'bg-purple-600 border-purple-500';
+                    return (
+                    <button key={m.id} onClick={() => setAppMode(m.id as 'dark' | 'light' | 'system' | 'sellerie')} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-xl border ${isActive ? activeBg + ' text-white' : 'bg-transparent border-slate-700 text-slate-400'}`}>
                       <m.i className="w-4 h-4 mb-1" />
                       <span className="text-[10px] font-bold">{m.l}</span>
                     </button>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
 
