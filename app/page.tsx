@@ -354,8 +354,9 @@ const BottomNavBar = () => (
   // =========================================================================
   // RENDER VIEWS
   // =========================================================================
+  const themeStyles = getThemeVars() as React.CSSProperties;
   return (
-    <div className={`min-h-screen ${themeClasses.bgApp} ${themeClasses.textMain} font-sans selection:bg-blue-500/30`} style={getThemeVars() as React.CSSProperties}>
+    <div className={`min-h-screen ${themeClasses.bgApp} ${themeClasses.textMain} font-sans selection:bg-blue-500/30`} style={themeStyles}>
 
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes float-up-fade {
