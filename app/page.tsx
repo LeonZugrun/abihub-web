@@ -1159,9 +1159,6 @@ const BottomNavBar = () => (
               </div>
               )}
             </div>
-            </div>
-
-            {/* Konto & Sicherheit */}
             <div className={`${themeClasses.bgCard} border ${themeClasses.border} rounded-[24px] p-5 shadow-lg`}>
                <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center"><Lock className="w-4 h-4 text-blue-400" /></div>
