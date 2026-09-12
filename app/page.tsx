@@ -193,14 +193,43 @@ export default function AbiHubApp() {
   // =========================================================================
   // THEME & COLORS
   // =========================================================================
+  
   const themeClasses = {
-    bgApp: 'bg-[#060913]',
-    bgCard: 'bg-[#0E1524]',
-    bgCardElevated: 'bg-[#151E32]',
-    border: 'border-[#1E293B]',
-    textMain: 'text-[#F8FAFC]',
-    textMuted: 'text-[#94A3B8]',
+    bgApp: 'bg-[var(--tw-bg-app)]',
+    bgCard: 'bg-[var(--tw-bg-card)]',
+    bgCardElevated: 'bg-[var(--tw-bg-elevated)]',
+    border: 'border-[var(--tw-border-color)]',
+    textMain: 'text-[var(--tw-text-main)]',
+    textMuted: 'text-[var(--tw-text-muted)]',
   };
+
+  const getThemeVars = () => {
+    if (appMode === 'light') return {
+      '--tw-bg-app': '#f8fafc',
+      '--tw-bg-card': '#ffffff',
+      '--tw-bg-elevated': '#f1f5f9',
+      '--tw-border-color': '#e2e8f0',
+      '--tw-text-main': '#0f172a',
+      '--tw-text-muted': '#64748b'
+    };
+    if (appMode === 'sellerie') return {
+      '--tw-bg-app': '#06130b',
+      '--tw-bg-card': '#0a1e12',
+      '--tw-bg-elevated': '#0e2a19',
+      '--tw-border-color': '#1b3d28',
+      '--tw-text-main': '#e2fbe9',
+      '--tw-text-muted': '#84cc9a'
+    };
+    return {
+      '--tw-bg-app': '#060913',
+      '--tw-bg-card': '#0E1524',
+      '--tw-bg-elevated': '#151E32',
+      '--tw-border-color': '#1E293B',
+      '--tw-text-main': '#F8FAFC',
+      '--tw-text-muted': '#94A3B8'
+    };
+  };
+
 
   const accentClasses = {
     blue: 'bg-blue-600 text-blue-500 border-blue-500',
@@ -229,19 +258,19 @@ export default function AbiHubApp() {
     return (
       <header className={`fixed top-0 inset-x-0 h-16 ${themeClasses.bgApp}/90 backdrop-blur-md z-40 border-b ${themeClasses.border} flex items-center justify-between px-4`}>
         <div>
-          <h1 className="text-[17px] font-bold text-white tracking-wide">{title}</h1>
-          <p className="text-[11px] text-slate-400">Gymnasium Abi 2026</p>
+          <h1 className="text-[17px] font-bold text-[var(--tw-text-main)] tracking-wide">{title}</h1>
+          <p className="text-[11px] text-[var(--tw-text-muted)]">Gymnasium Abi 2026</p>
         </div>
         <div className="flex items-center gap-4">
-          <button onClick={() => setCurrentView('members')} className="relative text-slate-300 hover:text-white transition">
+          <button onClick={() => setCurrentView('members')} className="relative text-[var(--tw-text-muted)] hover:text-[var(--tw-text-main)] transition">
             <Users className="w-5 h-5" />
             {pendingMembers.length > 0 && (
-              <span className="absolute -top-1.5 -right-2 bg-orange-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-[#060913]">
+              <span className="absolute -top-1.5 -right-2 bg-orange-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-[var(--tw-bg-app)]">
                 {pendingMembers.length}
               </span>
             )}
           </button>
-          <button className="text-slate-300 hover:text-white transition">
+          <button className="text-[var(--tw-text-muted)] hover:text-[var(--tw-text-main)] transition">
             <Shield className="w-5 h-5" />
           </button>
         </div>
@@ -264,7 +293,7 @@ export default function AbiHubApp() {
             <button
               key={item.id}
               onClick={() => setCurrentView(item.id as any)}
-              className={`flex-1 flex flex-col items-center justify-center gap-1.5 transition-all duration-200 ${active ? accentText : 'text-slate-500 hover:text-slate-300'}`}
+              className={`flex-1 flex flex-col items-center justify-center gap-1.5 transition-all duration-200 ${active ? accentText : 'text-slate-500 hover:text-[var(--tw-text-muted)]'}`}
             >
               <div className={`relative ${active ? 'scale-110' : ''}`}>
                 <item.icon className={`w-[22px] h-[22px] ${active ? 'stroke-[2.5px]' : 'stroke-2'}`} />
@@ -282,7 +311,7 @@ export default function AbiHubApp() {
   // RENDER VIEWS
   // =========================================================================
   return (
-    <div className={`min-h-screen ${themeClasses.bgApp} ${themeClasses.textMain} font-sans selection:bg-blue-500/30`}>
+    <div className={`min-h-screen ${themeClasses.bgApp} ${themeClasses.textMain} font-sans selection:bg-blue-500/30`} style={getThemeVars() as React.CSSProperties}>
       <TopAppBar />
 
       <main className="pt-20 pb-28 px-4 max-w-2xl mx-auto space-y-4">
@@ -299,14 +328,14 @@ export default function AbiHubApp() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-white">Hallo, {userName}!</h2>
+                  <h2 className="text-lg font-bold text-[var(--tw-text-main)]">Hallo, {userName}!</h2>
                   {userRole === 'Ersteller' && (
                     <span className="bg-orange-500 text-orange-950 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
                       👑 Ersteller
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
+                <p className="text-xs text-[var(--tw-text-muted)] mt-1 flex items-center gap-1.5">
                   <span>🍇</span> Gymnasium Abi 2026 • Rheinland-Pfalz (MSS...
                 </p>
               </div>
@@ -334,7 +363,7 @@ export default function AbiHubApp() {
             {/* Ferien Widget */}
             <div>
               <div className="flex items-center justify-between mb-3 px-1">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <h3 className="text-sm font-bold text-[var(--tw-text-main)] flex items-center gap-2">
                   <span className="bg-indigo-500/20 text-indigo-400 p-1.5 rounded-lg"><Calendar className="w-4 h-4" /></span>
                   Nächste Ferien
                 </h3>
@@ -349,7 +378,7 @@ export default function AbiHubApp() {
                       🍂
                     </div>
                     <div>
-                      <h4 className="text-lg font-bold text-white leading-tight">Herbstferien</h4>
+                      <h4 className="text-lg font-bold text-[var(--tw-text-main)] leading-tight">Herbstferien</h4>
                       <p className="text-[11px] text-blue-100 mt-0.5 font-medium">05. Okt. – 16. Okt. 2026</p>
                     </div>
                   </div>
@@ -360,7 +389,7 @@ export default function AbiHubApp() {
                 <div className="grid grid-cols-4 gap-2.5">
                   {[{v: 32, l: 'Tage'}, {v: 10, l: 'Std'}, {v: 20, l: 'Min'}, {v: 13, l: 'Sek'}].map((t, i) => (
                     <div key={i} className="bg-white/20 backdrop-blur-md rounded-2xl py-2 flex flex-col items-center justify-center border border-white/10 shadow-sm">
-                      <span className="text-xl font-bold text-white leading-none">{t.v}</span>
+                      <span className="text-xl font-bold text-[var(--tw-text-main)] leading-none">{t.v}</span>
                       <span className="text-[10px] text-blue-100 mt-1 font-medium">{t.l}</span>
                     </div>
                   ))}
@@ -371,10 +400,10 @@ export default function AbiHubApp() {
             {/* Notenschnitt Widget */}
             <div 
               onClick={() => setCurrentView('grades')}
-              className={`${themeClasses.bgCard} border ${themeClasses.border} rounded-[24px] p-5 shadow-lg cursor-pointer hover:bg-[#111929] transition`}
+              className={`${themeClasses.bgCard} border ${themeClasses.border} rounded-[24px] p-5 shadow-lg cursor-pointer hover:brightness-[0.97] transition`}
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <h3 className="text-sm font-bold text-[var(--tw-text-main)] flex items-center gap-2">
                   <span className="bg-emerald-500/20 text-emerald-400 p-1.5 rounded-lg"><Monitor className="w-4 h-4" /></span>
                   Dein Notenschnitt
                 </h3>
@@ -383,20 +412,20 @@ export default function AbiHubApp() {
               <div className="flex items-end gap-5 mb-4">
                 <div>
                   <div className={`text-5xl font-black ${accentText} tracking-tight leading-none`}>{mss.grade}</div>
-                  <div className="text-[10px] text-slate-400 font-medium mt-1">Abiturschnitt</div>
+                  <div className="text-[10px] text-[var(--tw-text-muted)] font-medium mt-1">Abiturschnitt</div>
                 </div>
                 <div className="w-px h-10 bg-slate-700/50 mb-1"></div>
                 <div>
                   <div className="text-3xl font-black text-amber-500 tracking-tight leading-none">{mss.averagePoints} Pkt</div>
-                  <div className="text-[10px] text-slate-400 font-medium mt-1">Ø Notenpunkte</div>
+                  <div className="text-[10px] text-[var(--tw-text-muted)] font-medium mt-1">Ø Notenpunkte</div>
                 </div>
                 <div className="w-px h-10 bg-slate-700/50 mb-1"></div>
                 <div>
-                  <div className="text-2xl font-bold text-white tracking-tight leading-none">{mss.totalPoints} / 900</div>
-                  <div className="text-[10px] text-slate-400 font-medium mt-1">Gesamtpunkte</div>
+                  <div className="text-2xl font-bold text-[var(--tw-text-main)] tracking-tight leading-none">{mss.totalPoints} / 900</div>
+                  <div className="text-[10px] text-[var(--tw-text-muted)] font-medium mt-1">Gesamtpunkte</div>
                 </div>
               </div>
-              <p className="text-[11.5px] text-slate-400 leading-relaxed bg-[#0A0F1C] p-3 rounded-xl border border-slate-800/60">
+              <p className="text-[11.5px] text-[var(--tw-text-muted)] leading-relaxed bg-[var(--tw-bg-elevated)] p-3 rounded-xl border border-[var(--tw-border-color)]">
                 Sehr solides Abitur! Mit {mss.grade} liegst du im oberen Drittel (MSS (Mainzer Studienstufe)).
               </p>
             </div>
@@ -404,7 +433,7 @@ export default function AbiHubApp() {
             {/* Nächste Termine Widget */}
             <div>
               <div className="flex items-center justify-between mb-3 px-1">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <h3 className="text-sm font-bold text-[var(--tw-text-main)] flex items-center gap-2">
                   <CalendarDays className="w-4 h-4" /> Nächste Termine
                 </h3>
                 <button onClick={() => setCurrentView('events')} className={`text-xs font-semibold ${accentText}`}>
@@ -416,8 +445,8 @@ export default function AbiHubApp() {
                    07. Sept.<br/>2026
                  </div>
                  <div>
-                   <h4 className="text-sm font-bold text-white">Abgabe der Abizeitung-Steckbriefe</h4>
-                   <p className="text-xs text-slate-400 mt-1">Online Redaktions-Portal</p>
+                   <h4 className="text-sm font-bold text-[var(--tw-text-main)]">Abgabe der Abizeitung-Steckbriefe</h4>
+                   <p className="text-xs text-[var(--tw-text-muted)] mt-1">Online Redaktions-Portal</p>
                  </div>
               </div>
             </div>
@@ -433,32 +462,32 @@ export default function AbiHubApp() {
             <div className={`${themeClasses.bgCard} border ${themeClasses.border} rounded-[24px] p-5 shadow-lg`}>
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <span className="text-xs font-medium text-slate-300">Abiturschnitt (Rheinland-Pfalz)</span>
+                  <span className="text-xs font-medium text-[var(--tw-text-muted)]">Abiturschnitt (Rheinland-Pfalz)</span>
                   <div className={`text-6xl font-black ${accentText} mt-1 tracking-tight`}>{mss.grade}</div>
                 </div>
-                <div className="bg-[#2D2B3B] text-slate-300 text-[10px] font-medium px-3 py-1.5 rounded-lg border border-slate-700/50 max-w-[120px] leading-tight">
+                <div className="bg-slate-500/10 text-[var(--tw-text-muted)] text-[10px] font-medium px-3 py-1.5 rounded-lg border border-[var(--tw-border-color)]/50 max-w-[120px] leading-tight">
                   MSS (Mainzer Studienstufe)
                 </div>
               </div>
 
-              <p className="text-xs text-slate-400 mb-6 pb-5 border-b border-slate-800">
+              <p className="text-xs text-[var(--tw-text-muted)] mb-6 pb-5 border-b border-slate-800">
                 Sehr solides Abitur! Mit {mss.grade} liegst du im oberen Drittel (MSS (Mainzer Studienstufe)).
               </p>
 
               <div className="grid grid-cols-2 gap-6 mb-5">
                 <div>
-                  <div className="text-[11px] font-bold text-slate-300 mb-1">Block I (Halbjahre)</div>
+                  <div className="text-[11px] font-bold text-[var(--tw-text-muted)] mb-1">Block I (Halbjahre)</div>
                   <div className={`text-base font-bold ${accentText}`}>{mss.block1} / 600 Pkt</div>
                   <div className="text-[10px] text-slate-500 mb-2">Min. 200 erforderlich</div>
-                  <div className="h-1.5 w-full bg-[#0A0F1C] rounded-full overflow-hidden">
+                  <div className="h-1.5 w-full bg-[var(--tw-bg-elevated)] rounded-full overflow-hidden">
                     <div className={`h-full ${accentBg} rounded-full`} style={{width: `${(mss.block1/600)*100}%`}} />
                   </div>
                 </div>
                 <div>
-                  <div className="text-[11px] font-bold text-slate-300 mb-1">Block II (Prüfungen)</div>
+                  <div className="text-[11px] font-bold text-[var(--tw-text-muted)] mb-1">Block II (Prüfungen)</div>
                   <div className="text-base font-bold text-amber-500">{mss.block2} / 300 Pkt</div>
                   <div className="text-[10px] text-slate-500 mb-2">Min. 100 erforderlich</div>
-                  <div className="h-1.5 w-full bg-[#0A0F1C] rounded-full overflow-hidden flex gap-1">
+                  <div className="h-1.5 w-full bg-[var(--tw-bg-elevated)] rounded-full overflow-hidden flex gap-1">
                     <div className="h-full bg-amber-500 rounded-full" style={{width: '60%'}} />
                     <div className="h-full bg-amber-500 rounded-full" style={{width: '15%'}} />
                     <div className="h-full bg-amber-500 rounded-full" style={{width: '5%'}} />
@@ -466,8 +495,8 @@ export default function AbiHubApp() {
                 </div>
               </div>
 
-              <div className="bg-[#0A0F1C] border border-[#1E293B] rounded-xl p-3 flex items-center gap-3">
-                <div className={`w-6 h-6 rounded-full ${accentBg} flex items-center justify-center text-white`}>
+              <div className="bg-[var(--tw-bg-elevated)] border border-[var(--tw-border-color)] rounded-xl p-3 flex items-center gap-3">
+                <div className={`w-6 h-6 rounded-full ${accentBg} flex items-center justify-center text-[var(--tw-text-main)]`}>
                   <Info className="w-3.5 h-3.5" />
                 </div>
                 <span className="text-xs font-bold text-slate-200">
@@ -478,7 +507,7 @@ export default function AbiHubApp() {
 
             {/* Fächer Liste */}
             <div>
-              <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+              <h3 className="text-sm font-bold text-[var(--tw-text-main)] mb-3 flex items-center gap-2">
                 <BookOpen className="w-4 h-4" /> Deine Oberstufen-Fächer ({subjects.length})
               </h3>
               
@@ -487,12 +516,12 @@ export default function AbiHubApp() {
                   <div 
                     key={s.id} 
                     onClick={() => { setEditingSubject(s); setIsAddModal(true); }}
-                    className={`${themeClasses.bgCard} border ${themeClasses.border} rounded-[20px] p-4 shadow-md cursor-pointer hover:border-slate-700 transition`}
+                    className={`${themeClasses.bgCard} border ${themeClasses.border} rounded-[20px] p-4 shadow-md cursor-pointer hover:border-[var(--tw-border-color)] transition`}
                   >
                     <div className="flex justify-between items-center mb-4">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-base text-white">{s.name}</span>
-                        {s.isLk && <span className={`text-[10px] font-bold ${accentBg} text-white px-1.5 py-0.5 rounded`}>LK</span>}
+                        <span className="font-bold text-base text-[var(--tw-text-main)]">{s.name}</span>
+                        {s.isLk && <span className={`text-[10px] font-bold ${accentBg} text-[var(--tw-text-main)] px-1.5 py-0.5 rounded`}>LK</span>}
                         {s.examType !== 'Keins' && <span className="text-[10px] font-bold bg-amber-500 text-amber-950 px-1.5 py-0.5 rounded">{s.examType}</span>}
                       </div>
                       <Trash2 onClick={(e) => { e.stopPropagation(); setSubjects(subjects.filter(sub => sub.id !== s.id)); }} className="w-4 h-4 text-slate-500 hover:text-red-400" />
@@ -503,13 +532,13 @@ export default function AbiHubApp() {
                         { l: 'Q1', v: s.q1 }, { l: 'Q2', v: s.q2 }, { l: 'Q3', v: s.q3 }, { l: 'Q4', v: s.q4 }, { l: 'Abi-Prüfung', v: s.exam }
                       ].map((term, i) => (
                         <div key={i} className="flex-1 flex flex-col items-center">
-                          <span className="text-[10px] font-bold text-slate-400 mb-1.5">{term.l}</span>
+                          <span className="text-[10px] font-bold text-[var(--tw-text-muted)] mb-1.5">{term.l}</span>
                           {term.v !== '' ? (
                             <div className="bg-white text-slate-900 text-xs font-bold w-full py-1.5 rounded-lg border border-slate-300">
                               {term.v} Pkt
                             </div>
                           ) : (
-                            <div className="bg-[#0A0F1C] border border-slate-800 text-slate-600 text-xs font-bold w-full py-1.5 rounded-lg">
+                            <div className="bg-[var(--tw-bg-elevated)] border border-slate-800 text-slate-600 text-xs font-bold w-full py-1.5 rounded-lg">
                               -
                             </div>
                           )}
@@ -521,7 +550,7 @@ export default function AbiHubApp() {
 
                 <button 
                   onClick={() => { setEditingSubject(null); setIsAddModal(true); }}
-                  className={`w-full py-4 rounded-[20px] ${accentBg} text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg hover:brightness-110 transition`}
+                  className={`w-full py-4 rounded-[20px] ${accentBg} text-[var(--tw-text-main)] font-bold text-sm flex items-center justify-center gap-2 shadow-lg hover:brightness-110 transition`}
                 >
                   <Plus className="w-5 h-5" /> Fach hinzufügen
                 </button>
@@ -541,42 +570,42 @@ export default function AbiHubApp() {
                       <GraduationCap className={`w-5 h-5 ${accentText}`} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-white">{editingSubject ? 'Fach bearbeiten' : 'Neues Schulfach'}</h3>
-                      <p className="text-[11px] text-slate-400">Notenpunkte (0-15 Pkt) & Prüfungsfach</p>
+                      <h3 className="text-lg font-bold text-[var(--tw-text-main)]">{editingSubject ? 'Fach bearbeiten' : 'Neues Schulfach'}</h3>
+                      <p className="text-[11px] text-[var(--tw-text-muted)]">Notenpunkte (0-15 Pkt) & Prüfungsfach</p>
                     </div>
                   </div>
-                  <button onClick={() => setIsAddModal(false)} className="text-slate-400"><Plus className="w-6 h-6 rotate-45" /></button>
+                  <button onClick={() => setIsAddModal(false)} className="text-[var(--tw-text-muted)]"><Plus className="w-6 h-6 rotate-45" /></button>
                 </div>
 
                 <div className="space-y-4">
                   <div className="relative">
-                    <label className="absolute -top-2 left-3 bg-[#151E32] px-1 text-[10px] font-bold text-slate-400">Fachname</label>
+                    <label className="absolute -top-2 left-3 bg-[var(--tw-bg-elevated)] px-1 text-[10px] font-bold text-[var(--tw-text-muted)]">Fachname</label>
                     <input 
                       type="text" 
                       defaultValue={editingSubject?.name || ''}
                       id="fachname"
-                      className="w-full bg-transparent border border-slate-600 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500" 
+                      className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-4 py-3 text-sm text-[var(--tw-text-main)] focus:outline-none focus:border-blue-500" 
                     />
                   </div>
 
                   {!editingSubject && (
                     <div>
-                      <label className="text-[10px] font-bold text-slate-400 block mb-2">Schnellauswahl:</label>
+                      <label className="text-[10px] font-bold text-[var(--tw-text-muted)] block mb-2">Schnellauswahl:</label>
                       <div className="flex flex-wrap gap-2">
                         {['Mathematik', 'Deutsch', 'Englisch', 'Biologie'].map(f => (
-                          <button key={f} onClick={() => (document.getElementById('fachname') as HTMLInputElement).value = f} className="bg-[#0A0F1C] border border-slate-700 text-slate-300 text-[11px] px-3 py-1.5 rounded-lg">{f}</button>
+                          <button key={f} onClick={() => (document.getElementById('fachname') as HTMLInputElement).value = f} className="bg-[var(--tw-bg-elevated)] border border-[var(--tw-border-color)] text-[var(--tw-text-muted)] text-[11px] px-3 py-1.5 rounded-lg">{f}</button>
                         ))}
                       </div>
                     </div>
                   )}
 
                   <label className="flex items-center gap-3 mt-4">
-                    <input type="checkbox" id="islk" defaultChecked={editingSubject?.isLk || false} className="w-5 h-5 rounded bg-[#0A0F1C] border-slate-600 text-blue-600 focus:ring-0 focus:ring-offset-0" />
-                    <span className="text-sm font-bold text-white">Leistungskurs (LK - zählt doppelt)</span>
+                    <input type="checkbox" id="islk" defaultChecked={editingSubject?.isLk || false} className="w-5 h-5 rounded bg-[var(--tw-bg-elevated)] border-[var(--tw-border-color)] text-blue-600 focus:ring-0 focus:ring-offset-0" />
+                    <span className="text-sm font-bold text-[var(--tw-text-main)]">Leistungskurs (LK - zählt doppelt)</span>
                   </label>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-300 block mb-2 mt-2">Abiturprüfung (Prüfungsfach):</label>
+                    <label className="text-[11px] font-bold text-[var(--tw-text-muted)] block mb-2 mt-2">Abiturprüfung (Prüfungsfach):</label>
                     <div className="flex justify-between gap-1">
                       {['Keins', 'P1', 'P2', 'P3', 'P4', 'P5'].map(p => (
                          <button 
@@ -584,16 +613,16 @@ export default function AbiHubApp() {
                            type="button"
                            onClick={(e) => {
                              document.querySelectorAll('.exam-btn').forEach(b => {
-                               b.classList.remove('bg-slate-700', 'border-slate-500', 'text-white');
-                               b.classList.add('bg-[#0A0F1C]', 'border-slate-700', 'text-slate-400');
+                               b.classList.remove('bg-slate-700', 'border-slate-500', 'text-[var(--tw-text-main)]');
+                               b.classList.add('bg-[var(--tw-bg-elevated)]', 'border-[var(--tw-border-color)]', 'text-[var(--tw-text-muted)]');
                              });
                              const target = e.currentTarget;
-                             target.classList.remove('bg-[#0A0F1C]', 'border-slate-700', 'text-slate-400');
-                             target.classList.add('bg-slate-700', 'border-slate-500', 'text-white', 'exam-btn-selected');
+                             target.classList.remove('bg-[var(--tw-bg-elevated)]', 'border-[var(--tw-border-color)]', 'text-[var(--tw-text-muted)]');
+                             target.classList.add('bg-slate-700', 'border-slate-500', 'text-[var(--tw-text-main)]', 'exam-btn-selected');
                              target.dataset.val = p;
                            }}
                            data-val={p}
-                           className={`exam-btn flex-1 py-1.5 rounded-lg border text-[11px] font-bold transition ${editingSubject?.examType === p || (!editingSubject && p==='Keins') ? 'bg-slate-700 border-slate-500 text-white exam-btn-selected' : 'bg-[#0A0F1C] border-slate-700 text-slate-400'}`}
+                           className={`exam-btn flex-1 py-1.5 rounded-lg border text-[11px] font-bold transition ${editingSubject?.examType === p || (!editingSubject && p==='Keins') ? 'bg-slate-700 border-slate-500 text-white exam-btn-selected' : 'bg-[var(--tw-bg-elevated)] border-[var(--tw-border-color)] text-[var(--tw-text-muted)]'}`}
                          >
                            {p}
                          </button>
@@ -602,25 +631,25 @@ export default function AbiHubApp() {
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-300 block mb-2 mt-2">Halbjahresnoten (0 bis 15 Punkte):</label>
+                    <label className="text-[11px] font-bold text-[var(--tw-text-muted)] block mb-2 mt-2">Halbjahresnoten (0 bis 15 Punkte):</label>
                     <div className="flex gap-2">
                       {['q1', 'q2', 'q3', 'q4'].map((q, i) => (
                         <div key={q} className="relative flex-1">
-                          <label className="absolute -top-2 left-2 bg-[#151E32] px-1 text-[9px] text-slate-400 uppercase">{q}</label>
-                          <input type="number" id={q} defaultValue={(editingSubject as any)?.[q] ?? ''} className="w-full bg-transparent border border-slate-600 rounded-xl px-2 py-2 text-center text-sm text-white focus:outline-none" />
+                          <label className="absolute -top-2 left-2 bg-[var(--tw-bg-elevated)] px-1 text-[9px] text-[var(--tw-text-muted)] uppercase">{q}</label>
+                          <input type="number" id={q} defaultValue={(editingSubject as any)?.[q] ?? ''} className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-2 py-2 text-center text-sm text-[var(--tw-text-main)] focus:outline-none" />
                         </div>
                       ))}
                     </div>
                   </div>
 
                   <div className="relative mt-2">
-                    <label className="absolute -top-2 left-3 bg-[#151E32] px-1 text-[10px] text-slate-400">Abiturprüfungs-Note (0 - 15 Pkt)</label>
-                    <input type="number" id="exam" defaultValue={editingSubject?.exam ?? ''} className="w-full bg-transparent border border-slate-600 rounded-xl px-4 py-3 text-sm text-white focus:outline-none" />
+                    <label className="absolute -top-2 left-3 bg-[var(--tw-bg-elevated)] px-1 text-[10px] text-[var(--tw-text-muted)]">Abiturprüfungs-Note (0 - 15 Pkt)</label>
+                    <input type="number" id="exam" defaultValue={editingSubject?.exam ?? ''} className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-4 py-3 text-sm text-[var(--tw-text-main)] focus:outline-none" />
                   </div>
                 </div>
 
                 <div className="flex gap-3 mt-6">
-                  <button onClick={() => setIsAddModal(false)} className="flex-1 py-3 rounded-xl border border-slate-600 text-slate-300 font-bold text-sm">Abbrechen</button>
+                  <button onClick={() => setIsAddModal(false)} className="flex-1 py-3 rounded-xl border border-[var(--tw-border-color)] text-[var(--tw-text-muted)] font-bold text-sm">Abbrechen</button>
                   <button onClick={() => {
                     const name = (document.getElementById('fachname') as HTMLInputElement).value;
                     const isLk = (document.getElementById('islk') as HTMLInputElement).checked;
@@ -645,7 +674,7 @@ export default function AbiHubApp() {
                     
                     setIsAddModal(false);
                     notify('Fach gespeichert!');
-                  }} className={`flex-1 py-3 rounded-xl ${accentBg} text-white font-bold text-sm`}>Speichern</button>
+                  }} className={`flex-1 py-3 rounded-xl ${accentBg} text-[var(--tw-text-main)] font-bold text-sm`}>Speichern</button>
                 </div>
               </div>
             </div>
@@ -661,13 +690,13 @@ export default function AbiHubApp() {
             <div className={`${themeClasses.bgCardElevated} rounded-xl p-1 flex gap-1 border ${themeClasses.border}`}>
               <button 
                 onClick={() => setEventsTab('calendar')} 
-                className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${eventsTab === 'calendar' ? 'bg-[#0A0F1C] text-blue-500 shadow-sm' : 'text-slate-400'}`}
+                className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${eventsTab === 'calendar' ? 'bg-[var(--tw-bg-elevated)] text-blue-500 shadow-sm' : 'text-[var(--tw-text-muted)]'}`}
               >
                 Kalender & Termine (3)
               </button>
               <button 
                 onClick={() => setEventsTab('news')}
-                className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${eventsTab === 'news' ? 'bg-[#0A0F1C] text-blue-500 shadow-sm' : 'text-slate-400'}`}
+                className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${eventsTab === 'news' ? 'bg-[var(--tw-bg-elevated)] text-blue-500 shadow-sm' : 'text-[var(--tw-text-muted)]'}`}
               >
                 Nachrichten (2)
               </button>
@@ -680,7 +709,7 @@ export default function AbiHubApp() {
                   {['Alle Termine', 'Prüfungen', 'Events & Ball', 'Fristen'].map(f => (
                     <button 
                       key={f} onClick={() => setEventFilter(f as any)}
-                      className={`text-xs font-bold px-3 py-1.5 rounded-lg border whitespace-nowrap transition ${eventFilter === f ? 'bg-[#2A2B3D] text-white border-slate-500' : 'bg-transparent text-slate-400 border-slate-700'}`}
+                      className={`text-xs font-bold px-3 py-1.5 rounded-lg border whitespace-nowrap transition ${eventFilter === f ? 'bg-[var(--tw-bg-elevated)] text-[var(--tw-text-main)] border-slate-500' : 'bg-transparent text-[var(--tw-text-muted)] border-[var(--tw-border-color)]'}`}
                     >
                       {f}
                     </button>
@@ -698,12 +727,12 @@ export default function AbiHubApp() {
                         </div>
                         <Trash2 onClick={() => setEvents(events.filter(e => e.id !== ev.id))} className="w-4 h-4 text-slate-500" />
                       </div>
-                      <h4 className="text-base font-bold text-white mb-2">{ev.title}</h4>
-                      <div className="space-y-1 text-xs text-slate-300">
+                      <h4 className="text-base font-bold text-[var(--tw-text-main)] mb-2">{ev.title}</h4>
+                      <div className="space-y-1 text-xs text-[var(--tw-text-muted)]">
                         <div className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5 text-blue-400" /> {new Date(ev.date).toLocaleDateString('de-DE', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}</div>
-                        <div className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-slate-400" /> {ev.location}</div>
+                        <div className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-[var(--tw-text-muted)]" /> {ev.location}</div>
                       </div>
-                      {ev.notes && <p className="text-[11px] text-slate-400 mt-3">{ev.notes}</p>}
+                      {ev.notes && <p className="text-[11px] text-[var(--tw-text-muted)] mt-3">{ev.notes}</p>}
                     </div>
                   ))}
                 </div>
@@ -721,11 +750,11 @@ export default function AbiHubApp() {
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
                         {n.isImportant && <span className="bg-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider">Wichtig</span>}
-                        <h4 className="text-sm font-bold text-white leading-tight pr-4">{n.title}</h4>
+                        <h4 className="text-sm font-bold text-[var(--tw-text-main)] leading-tight pr-4">{n.title}</h4>
                       </div>
                       <Trash2 onClick={() => setNews(news.filter(x => x.id !== n.id))} className="w-4 h-4 text-slate-500 flex-shrink-0" />
                     </div>
-                    <p className="text-xs text-slate-300 leading-relaxed my-3">{n.content}</p>
+                    <p className="text-xs text-[var(--tw-text-muted)] leading-relaxed my-3">{n.content}</p>
                     <div className="text-[10px] text-blue-400 flex justify-between items-end">
                       <span>Verfasst von {n.author}</span>
                       <span className="text-slate-500 text-right w-24">{n.date}</span>
@@ -751,51 +780,51 @@ export default function AbiHubApp() {
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center"><CalendarDays className="w-5 h-5 text-purple-400" /></div>
                   <div>
-                    <h3 className="text-lg font-bold text-white">Neuer Termin</h3>
-                    <p className="text-[11px] text-slate-400">Klausur, Frist oder Event planen</p>
+                    <h3 className="text-lg font-bold text-[var(--tw-text-main)]">Neuer Termin</h3>
+                    <p className="text-[11px] text-[var(--tw-text-muted)]">Klausur, Frist oder Event planen</p>
                   </div>
                 </div>
-                <button onClick={() => setShowEventModal(false)} className="text-slate-400"><Plus className="w-6 h-6 rotate-45" /></button>
+                <button onClick={() => setShowEventModal(false)} className="text-[var(--tw-text-muted)]"><Plus className="w-6 h-6 rotate-45" /></button>
               </div>
 
               <div className="space-y-4">
-                <input type="text" placeholder="Titel / Anlass" value={newEvent.title || ''} onChange={e=>setNewEvent({...newEvent, title: e.target.value})} className="w-full bg-transparent border border-slate-600 rounded-xl px-4 py-3 text-sm text-white focus:outline-none" />
+                <input type="text" placeholder="Titel / Anlass" value={newEvent.title || ''} onChange={e=>setNewEvent({...newEvent, title: e.target.value})} className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-4 py-3 text-sm text-[var(--tw-text-main)] focus:outline-none" />
                 
                 <div>
-                  <label className="text-[11px] font-bold text-slate-300 block mb-1">Datum & Uhrzeit:</label>
+                  <label className="text-[11px] font-bold text-[var(--tw-text-muted)] block mb-1">Datum & Uhrzeit:</label>
                   <div className="flex gap-2">
-                    <div className="flex-1 bg-transparent border border-slate-600 rounded-xl px-3 py-3 flex items-center gap-2">
+                    <div className="flex-1 bg-transparent border border-[var(--tw-border-color)] rounded-xl px-3 py-3 flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-blue-400" />
-                      <input type="date" value={newEvent.date} onChange={e=>setNewEvent({...newEvent, date: e.target.value})} className="bg-transparent text-sm text-white w-full focus:outline-none" />
+                      <input type="date" value={newEvent.date} onChange={e=>setNewEvent({...newEvent, date: e.target.value})} className="bg-transparent text-sm text-[var(--tw-text-main)] w-full focus:outline-none" />
                     </div>
                     <div className="w-24 relative">
-                      <label className="absolute -top-2 left-2 bg-[#151E32] px-1 text-[9px] text-slate-400">Uhrzeit</label>
-                      <input type="time" value={newEvent.time} onChange={e=>setNewEvent({...newEvent, time: e.target.value})} className="w-full bg-transparent border border-slate-600 rounded-xl px-3 py-3 text-sm text-white focus:outline-none" />
+                      <label className="absolute -top-2 left-2 bg-[var(--tw-bg-elevated)] px-1 text-[9px] text-[var(--tw-text-muted)]">Uhrzeit</label>
+                      <input type="time" value={newEvent.time} onChange={e=>setNewEvent({...newEvent, time: e.target.value})} className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-3 py-3 text-sm text-[var(--tw-text-main)] focus:outline-none" />
                     </div>
                   </div>
                   <div className="flex gap-1.5 mt-2">
                     {['Heute', 'Morgen', '+1 Woche', '+2 Wochen'].map(d => (
-                      <button key={d} className="flex-1 py-1.5 rounded-lg border border-slate-700 bg-[#0A0F1C] text-[10px] font-bold text-slate-300">{d}</button>
+                      <button key={d} className="flex-1 py-1.5 rounded-lg border border-[var(--tw-border-color)] bg-[var(--tw-bg-elevated)] text-[10px] font-bold text-[var(--tw-text-muted)]">{d}</button>
                     ))}
                   </div>
                 </div>
 
-                <input type="text" placeholder="Ort / Raum (optional)" value={newEvent.location || ''} onChange={e=>setNewEvent({...newEvent, location: e.target.value})} className="w-full bg-transparent border border-slate-600 rounded-xl px-4 py-3 text-sm text-white focus:outline-none" />
+                <input type="text" placeholder="Ort / Raum (optional)" value={newEvent.location || ''} onChange={e=>setNewEvent({...newEvent, location: e.target.value})} className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-4 py-3 text-sm text-[var(--tw-text-main)] focus:outline-none" />
                 
                 <div>
-                  <label className="text-[11px] font-bold text-slate-300 block mb-1">Kategorie:</label>
+                  <label className="text-[11px] font-bold text-[var(--tw-text-muted)] block mb-1">Kategorie:</label>
                   <div className="flex gap-2">
                     {['Klausur', 'Frist', 'Event', 'Treffen'].map(c => (
-                      <button key={c} onClick={()=>setNewEvent({...newEvent, category: c as any})} className={`flex-1 py-2 rounded-lg border text-[11px] font-bold ${newEvent.category===c ? 'bg-slate-700 border-slate-500 text-white' : 'bg-[#0A0F1C] border-slate-700 text-slate-400'}`}>{c}</button>
+                      <button key={c} onClick={()=>setNewEvent({...newEvent, category: c as any})} className={`flex-1 py-2 rounded-lg border text-[11px] font-bold ${newEvent.category===c ? 'bg-slate-700 border-slate-500 text-white' : 'bg-[var(--tw-bg-elevated)] border-[var(--tw-border-color)] text-[var(--tw-text-muted)]'}`}>{c}</button>
                     ))}
                   </div>
                 </div>
 
-                <textarea placeholder="Zusätzliche Notizen (optional)" value={newEvent.notes || ''} onChange={e=>setNewEvent({...newEvent, notes: e.target.value})} rows={2} className="w-full bg-transparent border border-slate-600 rounded-xl px-4 py-3 text-sm text-white focus:outline-none resize-none" />
+                <textarea placeholder="Zusätzliche Notizen (optional)" value={newEvent.notes || ''} onChange={e=>setNewEvent({...newEvent, notes: e.target.value})} rows={2} className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-4 py-3 text-sm text-[var(--tw-text-main)] focus:outline-none resize-none" />
               </div>
 
               <div className="flex gap-3 mt-5">
-                <button onClick={() => setShowEventModal(false)} className="flex-1 py-3 rounded-xl border border-slate-600 text-slate-300 font-bold text-sm">Abbrechen</button>
+                <button onClick={() => setShowEventModal(false)} className="flex-1 py-3 rounded-xl border border-[var(--tw-border-color)] text-[var(--tw-text-muted)] font-bold text-sm">Abbrechen</button>
                 <button onClick={() => {
                   setEvents([...events, { id: Date.now().toString(), title: newEvent.title || 'Neuer Termin', date: newEvent.date || '', location: newEvent.location || '', category: newEvent.category || 'Event', notes: newEvent.notes }]);
                   setShowEventModal(false);
@@ -814,27 +843,27 @@ export default function AbiHubApp() {
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center"><MessageSquare className="w-5 h-5 text-purple-400" /></div>
                   <div>
-                    <h3 className="text-lg font-bold text-white">Mitteilung verfassen</h3>
-                    <p className="text-[11px] text-slate-400">Nachricht an die gesamte Stufe</p>
+                    <h3 className="text-lg font-bold text-[var(--tw-text-main)]">Mitteilung verfassen</h3>
+                    <p className="text-[11px] text-[var(--tw-text-muted)]">Nachricht an die gesamte Stufe</p>
                   </div>
                 </div>
-                <button onClick={() => setShowNewsModal(false)} className="text-slate-400"><Plus className="w-6 h-6 rotate-45" /></button>
+                <button onClick={() => setShowNewsModal(false)} className="text-[var(--tw-text-muted)]"><Plus className="w-6 h-6 rotate-45" /></button>
               </div>
               <div className="space-y-4">
-                <input type="text" placeholder="Titel der Mitteilung" onChange={e=>setNewNews({...newNews, title: e.target.value})} className="w-full bg-transparent border border-slate-600 rounded-xl px-4 py-3 text-sm text-white focus:outline-none" />
-                <textarea placeholder="Nachrichtentext" rows={4} onChange={e=>setNewNews({...newNews, content: e.target.value})} className="w-full bg-transparent border border-slate-600 rounded-xl px-4 py-3 text-sm text-white focus:outline-none resize-none" />
+                <input type="text" placeholder="Titel der Mitteilung" onChange={e=>setNewNews({...newNews, title: e.target.value})} className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-4 py-3 text-sm text-[var(--tw-text-main)] focus:outline-none" />
+                <textarea placeholder="Nachrichtentext" rows={4} onChange={e=>setNewNews({...newNews, content: e.target.value})} className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-4 py-3 text-sm text-[var(--tw-text-main)] focus:outline-none resize-none" />
                 <label className="flex items-center gap-3 mt-4">
-                  <input type="checkbox" onChange={e=>setNewNews({...newNews, isImportant: e.target.checked})} className="w-5 h-5 rounded bg-[#0A0F1C] border-slate-600 text-rose-500" />
-                  <span className="text-sm font-bold text-white">Als Eilmeldung (Wichtig) markieren</span>
+                  <input type="checkbox" onChange={e=>setNewNews({...newNews, isImportant: e.target.checked})} className="w-5 h-5 rounded bg-[var(--tw-bg-elevated)] border-[var(--tw-border-color)] text-rose-500" />
+                  <span className="text-sm font-bold text-[var(--tw-text-main)]">Als Eilmeldung (Wichtig) markieren</span>
                 </label>
               </div>
               <div className="flex gap-3 mt-6">
-                <button onClick={() => setShowNewsModal(false)} className="flex-1 py-3 rounded-xl border border-slate-600 text-slate-300 font-bold text-sm">Abbrechen</button>
+                <button onClick={() => setShowNewsModal(false)} className="flex-1 py-3 rounded-xl border border-[var(--tw-border-color)] text-[var(--tw-text-muted)] font-bold text-sm">Abbrechen</button>
                 <button onClick={() => {
                   setNews([{ id: Date.now().toString(), title: newNews.title||'', content: newNews.content||'', author: userName, date: 'Gerade eben', isImportant: newNews.isImportant||false }, ...news]);
                   setShowNewsModal(false);
                   notify('Nachricht gesendet!');
-                }} className="flex-1 py-3 rounded-xl bg-slate-700 text-slate-300 font-bold text-sm">Veröffentlichen</button>
+                }} className="flex-1 py-3 rounded-xl bg-slate-700 text-[var(--tw-text-muted)] font-bold text-sm">Veröffentlichen</button>
               </div>
             </div>
           </div>
@@ -850,8 +879,8 @@ export default function AbiHubApp() {
             <div className={`${themeClasses.bgCard} border ${themeClasses.border} rounded-[20px] p-4 flex items-center gap-4 shadow-md`}>
               <div className="w-12 h-12 rounded-2xl bg-blue-500 flex items-center justify-center shadow-lg"><BookOpen className="w-6 h-6 text-white" /></div>
               <div>
-                <h3 className="text-base font-bold text-white">Abizeitung & Momente</h3>
-                <p className="text-[11px] text-slate-400">Sammelt Texte, Erinnerungen & Fotos für das gedruckte Abibuch!</p>
+                <h3 className="text-base font-bold text-[var(--tw-text-main)]">Abizeitung & Momente</h3>
+                <p className="text-[11px] text-[var(--tw-text-muted)]">Sammelt Texte, Erinnerungen & Fotos für das gedruckte Abibuch!</p>
               </div>
             </div>
 
@@ -860,7 +889,7 @@ export default function AbiHubApp() {
               {['Alle Beiträge', '📸 Mit Fotos', '✍️ Nur Text'].map(f => (
                 <button 
                   key={f} onClick={() => setYbFilter(f as any)}
-                  className={`text-xs font-bold px-3.5 py-1.5 rounded-lg border whitespace-nowrap transition ${ybFilter === f ? 'bg-slate-700 text-white border-slate-500' : 'bg-transparent text-slate-300 border-slate-600'}`}
+                  className={`text-xs font-bold px-3.5 py-1.5 rounded-lg border whitespace-nowrap transition ${ybFilter === f ? 'bg-slate-700 text-white border-slate-500' : 'bg-transparent text-[var(--tw-text-muted)] border-[var(--tw-border-color)]'}`}
                 >
                   {f}
                 </button>
@@ -868,10 +897,10 @@ export default function AbiHubApp() {
             </div>
             
             <div className="flex justify-between items-center px-1">
-              <span className="text-[11px] text-slate-400 font-bold">{posts.length} Einträge</span>
+              <span className="text-[11px] text-[var(--tw-text-muted)] font-bold">{posts.length} Einträge</span>
               <label className="flex items-center gap-2">
-                <input type="checkbox" checked={ybOnlyPrint} onChange={(e) => setYbOnlyPrint(e.target.checked)} className="w-4 h-4 rounded bg-transparent border-slate-600 text-amber-500 focus:ring-0" />
-                <span className="text-[11px] text-slate-300 font-medium">Nur fürs Abibuch markierte</span>
+                <input type="checkbox" checked={ybOnlyPrint} onChange={(e) => setYbOnlyPrint(e.target.checked)} className="w-4 h-4 rounded bg-transparent border-[var(--tw-border-color)] text-amber-500 focus:ring-0" />
+                <span className="text-[11px] text-[var(--tw-text-muted)] font-medium">Nur fürs Abibuch markierte</span>
               </label>
             </div>
 
@@ -886,7 +915,7 @@ export default function AbiHubApp() {
                         <div className="w-9 h-9 rounded-full bg-purple-900/60 flex items-center justify-center text-sm font-bold text-purple-200">
                           {post.avatar}
                         </div>
-                        <div className="text-sm font-bold text-white flex items-center gap-2">
+                        <div className="text-sm font-bold text-[var(--tw-text-main)] flex items-center gap-2">
                           {post.author}
                         </div>
                       </div>
@@ -912,7 +941,7 @@ export default function AbiHubApp() {
                             return {...p, votesCount: voted ? p.votesCount-1 : p.votesCount+1, votedUserIds: voted ? [] : ['user_me']};
                           } return p;
                         }));
-                      }} className="bg-[#1C2538] hover:bg-[#253046] border border-slate-700/50 text-slate-300 text-[11px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition">
+                      }} className="bg-[var(--tw-bg-elevated)] hover:brightness-[0.95] border border-[var(--tw-border-color)]/50 text-[var(--tw-text-muted)] text-[11px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition">
                         <ThumbsUp className={`w-3.5 h-3.5 ${hasVoted ? 'fill-slate-300' : ''}`} /> {post.votesCount} Stimmen
                       </button>
 
@@ -941,32 +970,32 @@ export default function AbiHubApp() {
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center"><Edit2 className="w-5 h-5 text-blue-400" /></div>
                   <div>
-                    <h3 className="text-lg font-bold text-white">Neuer Beitrag</h3>
-                    <p className="text-[11px] text-slate-400">Text, Fotos & Erinnerungen</p>
+                    <h3 className="text-lg font-bold text-[var(--tw-text-main)]">Neuer Beitrag</h3>
+                    <p className="text-[11px] text-[var(--tw-text-muted)]">Text, Fotos & Erinnerungen</p>
                   </div>
                 </div>
-                <button onClick={() => setShowPostModal(false)} className="text-slate-400"><Plus className="w-6 h-6 rotate-45" /></button>
+                <button onClick={() => setShowPostModal(false)} className="text-[var(--tw-text-muted)]"><Plus className="w-6 h-6 rotate-45" /></button>
               </div>
               <div className="space-y-4">
-                <textarea placeholder="Was möchtest du festhalten? (Zitat, Story, Panne, Erinnerung...)" rows={4} onChange={e=>setNewPost({...newPost, content: e.target.value})} className="w-full bg-transparent border border-slate-600 rounded-xl px-4 py-3 text-sm text-white focus:outline-none resize-none" />
+                <textarea placeholder="Was möchtest du festhalten? (Zitat, Story, Panne, Erinnerung...)" rows={4} onChange={e=>setNewPost({...newPost, content: e.target.value})} className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-4 py-3 text-sm text-[var(--tw-text-main)] focus:outline-none resize-none" />
                 
-                <button className="w-full bg-transparent border border-slate-600 rounded-xl px-4 py-3 flex items-center justify-between text-slate-300">
+                <button className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-4 py-3 flex items-center justify-between text-[var(--tw-text-muted)]">
                   <div className="flex items-center gap-3"><ImageIcon className="w-5 h-5 text-blue-400"/> <div className="text-left"><div className="text-sm font-bold">Bild hinzufügen</div><div className="text-[10px]">Foto aus Galerie wählen</div></div></div>
                   <ChevronRight className="w-5 h-5" />
                 </button>
 
                 <div className="flex items-center justify-between px-2">
-                  <div className="flex items-center gap-2 text-sm text-slate-300"><Calendar className="w-4 h-4"/> Datum & Uhrzeit hinzufügen (optional)</div>
-                  <div className={`w-10 h-6 rounded-full border border-slate-600 ${newPost.withTime ? 'bg-blue-500' : 'bg-transparent'} relative transition-colors`} onClick={()=>setNewPost({...newPost, withTime: !newPost.withTime})}>
+                  <div className="flex items-center gap-2 text-sm text-[var(--tw-text-muted)]"><Calendar className="w-4 h-4"/> Datum & Uhrzeit hinzufügen (optional)</div>
+                  <div className={`w-10 h-6 rounded-full border border-[var(--tw-border-color)] ${newPost.withTime ? 'bg-blue-500' : 'bg-transparent'} relative transition-colors`} onClick={()=>setNewPost({...newPost, withTime: !newPost.withTime})}>
                     <div className={`w-4 h-4 rounded-full bg-slate-400 absolute top-0.5 transition-all ${newPost.withTime ? 'left-5 bg-white' : 'left-1'}`} />
                   </div>
                 </div>
 
                 <div className="relative mt-2">
-                  <label className="absolute -top-2 left-3 bg-[#151E32] px-1 text-[10px] text-slate-400">Name / Verfasser (optional)</label>
-                  <div className="flex items-center gap-2 bg-transparent border border-slate-600 rounded-xl px-4 py-3">
-                    <User className="w-4 h-4 text-slate-400" />
-                    <input type="text" defaultValue={userName} onChange={e=>setNewPost({...newPost, author: e.target.value})} className="w-full bg-transparent text-sm text-white focus:outline-none" />
+                  <label className="absolute -top-2 left-3 bg-[var(--tw-bg-elevated)] px-1 text-[10px] text-[var(--tw-text-muted)]">Name / Verfasser (optional)</label>
+                  <div className="flex items-center gap-2 bg-transparent border border-[var(--tw-border-color)] rounded-xl px-4 py-3">
+                    <User className="w-4 h-4 text-[var(--tw-text-muted)]" />
+                    <input type="text" defaultValue={userName} onChange={e=>setNewPost({...newPost, author: e.target.value})} className="w-full bg-transparent text-sm text-[var(--tw-text-main)] focus:outline-none" />
                   </div>
                 </div>
               </div>
@@ -979,7 +1008,7 @@ export default function AbiHubApp() {
                      setPosts([{ id: Date.now(), author: newPost.author, authorRole: 'Schüler', avatar: 'L', content: newPost.content, category: 'Zitate', votesCount: 0, votedUserIds: [], isSelectedForPrint: false, date: 'Gerade eben' }, ...posts]);
                      setShowPostModal(false);
                      notify('Beitrag verfasst!');
-                   }} className="bg-[#1C2538] text-slate-400 font-bold px-4 py-2 rounded-xl border border-slate-700/50 flex items-center gap-1.5"><ImageIcon className="w-4 h-4"/> Beitrag verfassen</button>
+                   }} className="bg-[var(--tw-bg-elevated)] text-[var(--tw-text-muted)] font-bold px-4 py-2 rounded-xl border border-[var(--tw-border-color)]/50 flex items-center gap-1.5"><ImageIcon className="w-4 h-4"/> Beitrag verfassen</button>
                 </div>
               </div>
             </div>
@@ -998,23 +1027,23 @@ export default function AbiHubApp() {
                
                <div className="relative">
                  <div className={`w-20 h-20 rounded-full ${accentBg} flex items-center justify-center text-4xl shadow-xl z-10`}>{userAvatar}</div>
-                 <div className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 rounded-full border-2 border-[#131E35] flex items-center justify-center cursor-pointer hover:scale-110 transition"><Camera className="w-3 h-3 text-white" /></div>
+                 <div className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 rounded-full border-2 border-[var(--tw-bg-app)] flex items-center justify-center cursor-pointer hover:scale-110 transition"><Camera className="w-3 h-3 text-white" /></div>
                </div>
                
                <div className="mt-4 flex flex-col items-center">
                  <div className="flex items-center gap-2">
-                   <h2 className="text-xl font-bold text-white">{userName}</h2>
+                   <h2 className="text-xl font-bold text-[var(--tw-text-main)]">{userName}</h2>
                    <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded">{userRole}</span>
                  </div>
-                 <p className="text-xs text-slate-400 mt-1">{userEmail}</p>
+                 <p className="text-xs text-[var(--tw-text-muted)] mt-1">{userEmail}</p>
                </div>
 
-               <div className="mt-4 bg-[#0A0F1C] border border-slate-800 rounded-xl px-4 py-2 w-full text-center">
-                 <p className="text-[11px] font-medium text-slate-300 italic">{userQuote}</p>
+               <div className="mt-4 bg-[var(--tw-bg-elevated)] border border-slate-800 rounded-xl px-4 py-2 w-full text-center">
+                 <p className="text-[11px] font-medium text-[var(--tw-text-muted)] italic">{userQuote}</p>
                </div>
 
                <div className="flex gap-3 w-full mt-5">
-                 <button className="flex-1 bg-[#1C2538] border border-slate-700 text-slate-300 text-xs font-bold py-2.5 rounded-xl flex items-center justify-center gap-2"><Edit2 className="w-3.5 h-3.5"/> Profil</button>
+                 <button className="flex-1 bg-[var(--tw-bg-elevated)] border border-[var(--tw-border-color)] text-[var(--tw-text-muted)] text-xs font-bold py-2.5 rounded-xl flex items-center justify-center gap-2"><Edit2 className="w-3.5 h-3.5"/> Profil</button>
                  <button className="flex-1 bg-[#2C2622] border border-orange-500/30 text-orange-400 text-[11px] font-mono font-bold py-2.5 rounded-xl flex items-center justify-center gap-1.5"><Key className="w-3.5 h-3.5"/> {joinKey}</button>
                </div>
             </div>
@@ -1024,13 +1053,13 @@ export default function AbiHubApp() {
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center"><Palette className="w-4 h-4 text-indigo-400" /></div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">Darstellung Personalisieren</h3>
-                  <p className="text-[11px] text-slate-400">App-Modus und Akzentfarbe anpassen</p>
+                  <h3 className="text-sm font-bold text-[var(--tw-text-main)]">Darstellung Personalisieren</h3>
+                  <p className="text-[11px] text-[var(--tw-text-muted)]">App-Modus und Akzentfarbe anpassen</p>
                 </div>
               </div>
 
               <div className="mb-4">
-                <p className="text-[11px] font-bold text-white mb-2">App-Modus</p>
+                <p className="text-[11px] font-bold text-[var(--tw-text-main)] mb-2">App-Modus</p>
                 <div className="flex gap-2">
                   {[
                     {id: 'dark', i: Moon, l: 'Dark'},
@@ -1042,7 +1071,7 @@ export default function AbiHubApp() {
                     const activeBgMap = {blue: 'bg-blue-600 border-blue-500', red: 'bg-red-600 border-red-500', purple: 'bg-purple-600 border-purple-500', orange: 'bg-orange-500 border-orange-400', green: 'bg-emerald-600 border-emerald-500', pink: 'bg-pink-600 border-pink-500'};
                     const activeBg = (activeBgMap as any)[accentColor] || 'bg-purple-600 border-purple-500';
                     return (
-                    <button key={m.id} onClick={() => setAppMode(m.id as 'dark' | 'light' | 'system' | 'sellerie')} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-xl border ${isActive ? activeBg + ' text-white' : 'bg-transparent border-slate-700 text-slate-400'}`}>
+                    <button key={m.id} onClick={() => setAppMode(m.id as 'dark' | 'light' | 'system' | 'sellerie')} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-xl border ${isActive ? activeBg + ' text-white' : 'bg-transparent border-[var(--tw-border-color)] text-[var(--tw-text-muted)]'}`}>
                       <m.i className="w-4 h-4 mb-1" />
                       <span className="text-[10px] font-bold">{m.l}</span>
                     </button>
@@ -1052,13 +1081,13 @@ export default function AbiHubApp() {
               </div>
 
               <div>
-                 <p className="text-[11px] font-bold text-white mb-2">Akzentfarbe</p>
+                 <p className="text-[11px] font-bold text-[var(--tw-text-main)] mb-2">Akzentfarbe</p>
                  <div className="flex gap-3">
                    {['blue', 'red', 'purple', 'orange', 'green', 'pink'].map(c => {
                      const bgMap = {blue: 'bg-blue-600', red: 'bg-red-600', purple: 'bg-purple-600', orange: 'bg-orange-500', green: 'bg-emerald-600', pink: 'bg-pink-600'};
                      return (
                        <button key={c} onClick={() => setAccentColor(c)} className={`w-8 h-8 rounded-full ${(bgMap as any)[c]} flex items-center justify-center ${accentColor === c ? 'ring-2 ring-white ring-offset-2 ring-offset-[#131E35]' : ''}`}>
-                         {accentColor === c && <Check className="w-4 h-4 text-white" />}
+                         {accentColor === c && <Check className="w-4 h-4 text-[var(--tw-text-main)]" />}
                        </button>
                      )
                    })}
@@ -1070,29 +1099,29 @@ export default function AbiHubApp() {
             <div className={`${themeClasses.bgCard} border ${themeClasses.border} rounded-[24px] p-5 shadow-lg`}>
                <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center"><Lock className="w-4 h-4 text-blue-400" /></div>
-                <h3 className="text-sm font-bold text-white">Konto & Sicherheit</h3>
+                <h3 className="text-sm font-bold text-[var(--tw-text-main)]">Konto & Sicherheit</h3>
               </div>
               <div className="space-y-4">
                 <div className="flex items-center justify-between group cursor-pointer">
                   <div className="flex items-center gap-3">
                     <Mail className="w-4 h-4 text-blue-400" />
                     <div>
-                      <div className="text-sm font-bold text-white">E-Mail-Adresse</div>
-                      <div className="text-[11px] text-slate-400">{userEmail}</div>
+                      <div className="text-sm font-bold text-[var(--tw-text-main)]">E-Mail-Adresse</div>
+                      <div className="text-[11px] text-[var(--tw-text-muted)]">{userEmail}</div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition" />
+                  <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-[var(--tw-text-main)] transition" />
                 </div>
                 <div className="h-px bg-slate-800 w-full" />
                 <div className="flex items-center justify-between group cursor-pointer">
                   <div className="flex items-center gap-3">
                     <Key className="w-4 h-4 text-blue-400" />
                     <div>
-                      <div className="text-sm font-bold text-white">Passwort ändern</div>
-                      <div className="text-[11px] text-slate-400">Passwort sicher aktualisieren</div>
+                      <div className="text-sm font-bold text-[var(--tw-text-main)]">Passwort ändern</div>
+                      <div className="text-[11px] text-[var(--tw-text-muted)]">Passwort sicher aktualisieren</div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition" />
+                  <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-[var(--tw-text-main)] transition" />
                 </div>
               </div>
             </div>
@@ -1101,37 +1130,37 @@ export default function AbiHubApp() {
             <div className={`${themeClasses.bgCard} border ${themeClasses.border} rounded-[24px] p-5 shadow-lg`}>
                <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center"><GraduationCap className="w-4 h-4 text-purple-400" /></div>
-                <h3 className="text-sm font-bold text-white">Abiturjahrgang & System</h3>
+                <h3 className="text-sm font-bold text-[var(--tw-text-main)]">Abiturjahrgang & System</h3>
               </div>
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <span className="text-xl">🍇</span>
                   <div>
-                    <div className="text-sm font-bold text-white">Rheinland-Pfalz (MSS (Mainzer Studienstufe))</div>
-                    <div className="text-[11px] text-slate-400">3 Leistungskurse • Abitur 2026</div>
+                    <div className="text-sm font-bold text-[var(--tw-text-main)]">Rheinland-Pfalz (MSS (Mainzer Studienstufe))</div>
+                    <div className="text-[11px] text-[var(--tw-text-muted)]">3 Leistungskurse • Abitur 2026</div>
                   </div>
                 </div>
                 <div className="h-px bg-slate-800 w-full" />
                 <div onClick={() => setCurrentView('members')} className="flex items-center justify-between group cursor-pointer">
                   <div className="flex items-center gap-3">
-                    <Users className="w-4 h-4 text-slate-300" />
+                    <Users className="w-4 h-4 text-[var(--tw-text-muted)]" />
                     <div>
-                      <div className="text-sm font-bold text-white">Stufenmitglieder & Freigaben</div>
+                      <div className="text-sm font-bold text-[var(--tw-text-main)]">Stufenmitglieder & Freigaben</div>
                       <div className="text-[11px] font-bold text-orange-500">1 Beitrittsanfrage(n) ausstehend</div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition" />
+                  <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-[var(--tw-text-main)] transition" />
                 </div>
                 <div className="h-px bg-slate-800 w-full" />
                 <div className="flex items-center justify-between group cursor-pointer">
                   <div className="flex items-center gap-3">
-                    <Shield className="w-4 h-4 text-slate-300" />
+                    <Shield className="w-4 h-4 text-[var(--tw-text-muted)]" />
                     <div>
-                      <div className="text-sm font-bold text-white">Datensicherung & Export</div>
-                      <div className="text-[11px] text-slate-400">JSON Backup für Abizeitung-Redaktion</div>
+                      <div className="text-sm font-bold text-[var(--tw-text-main)]">Datensicherung & Export</div>
+                      <div className="text-[11px] text-[var(--tw-text-muted)]">JSON Backup für Abizeitung-Redaktion</div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition" />
+                  <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-[var(--tw-text-main)] transition" />
                 </div>
               </div>
             </div>
@@ -1151,8 +1180,8 @@ export default function AbiHubApp() {
             <div className={`${themeClasses.bgCard} border ${themeClasses.border} rounded-[24px] p-5 shadow-lg`}>
                <div className="flex justify-between items-start mb-5">
                  <div>
-                   <h2 className="text-lg font-bold text-white leading-tight">Gymnasium Abi 2026</h2>
-                   <p className="text-[11px] text-slate-400 mt-1">Abiturjahrgang 2026 • 5 Mitschüler</p>
+                   <h2 className="text-lg font-bold text-[var(--tw-text-main)] leading-tight">Gymnasium Abi 2026</h2>
+                   <p className="text-[11px] text-[var(--tw-text-muted)] mt-1">Abiturjahrgang 2026 • 5 Mitschüler</p>
                  </div>
                  <span className="bg-purple-900/40 text-purple-300 border border-purple-700/50 text-[10px] font-bold px-3 py-1.5 rounded-lg">
                    Abitur 2026
@@ -1161,10 +1190,10 @@ export default function AbiHubApp() {
                
                <div className="pt-4 border-t border-slate-800 flex justify-between items-center">
                  <div>
-                   <p className="text-[10px] text-slate-400">Zugangsschlüssel für Mitschüler:</p>
+                   <p className="text-[10px] text-[var(--tw-text-muted)]">Zugangsschlüssel für Mitschüler:</p>
                    <p className="text-sm font-bold text-orange-500 mt-0.5">{joinKey}</p>
                  </div>
-                 <button onClick={() => { navigator.clipboard.writeText(joinKey); notify('Kopiert!'); }} className="bg-[#1C2538] border border-slate-700 hover:bg-[#253046] text-blue-400 text-[11px] font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition">
+                 <button onClick={() => { navigator.clipboard.writeText(joinKey); notify('Kopiert!'); }} className="bg-[var(--tw-bg-elevated)] border border-[var(--tw-border-color)] hover:brightness-[0.95] text-blue-400 text-[11px] font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition">
                    <Key className="w-3.5 h-3.5" /> Kopieren
                  </button>
                </div>
@@ -1173,25 +1202,25 @@ export default function AbiHubApp() {
             {/* Pending Requests */}
             {pendingMembers.length > 0 && (
               <div className="bg-[#141008] border border-orange-500/60 rounded-[24px] p-5 shadow-lg">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-4">
+                <h3 className="text-sm font-bold text-[var(--tw-text-main)] flex items-center gap-2 mb-4">
                   <UserPlus className="w-4 h-4 text-orange-500" /> Offene Beitrittsanfragen ({pendingMembers.length})
                 </h3>
                 <div className="space-y-3">
                   {pendingMembers.map(m => (
-                    <div key={m.id} className="bg-[#0A0F1C] border border-slate-800 rounded-[20px] p-4">
+                    <div key={m.id} className="bg-[var(--tw-bg-elevated)] border border-slate-800 rounded-[20px] p-4">
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex items-center gap-3">
                            <div className="w-10 h-10 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center text-lg">{m.avatar}</div>
                            <div>
-                             <div className="text-sm font-bold text-white">{m.name}</div>
-                             <div className="text-[10px] text-slate-400">{m.email}</div>
+                             <div className="text-sm font-bold text-[var(--tw-text-main)]">{m.name}</div>
+                             <div className="text-[10px] text-[var(--tw-text-muted)]">{m.email}</div>
                              <div className="text-[10px] text-blue-400 mt-0.5">LKs: {m.lks}</div>
                            </div>
                         </div>
                         <span className="bg-emerald-900/30 text-emerald-400 text-[9px] font-bold px-2 py-0.5 rounded border border-emerald-800">E-Mail bestätigt</span>
                       </div>
                       <div className="flex gap-2">
-                        <button className="flex-1 py-2.5 rounded-xl border border-slate-700 text-rose-400 text-[11px] font-bold hover:bg-rose-950/20 transition">Ablehnen</button>
+                        <button className="flex-1 py-2.5 rounded-xl border border-[var(--tw-border-color)] text-rose-400 text-[11px] font-bold hover:bg-rose-950/20 transition">Ablehnen</button>
                         <button onClick={() => {
                           setMembers(members.map(x => x.id === m.id ? {...x, isPending: false} : x));
                           notify(`${m.name} wurde genehmigt!`);
@@ -1205,7 +1234,7 @@ export default function AbiHubApp() {
 
             {/* Active Members */}
             <div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-3">
+              <h3 className="text-sm font-bold text-[var(--tw-text-main)] flex items-center gap-2 mb-3">
                 <Users className="w-4 h-4 text-blue-400" /> Stufenliste ({activeMembers.length})
               </h3>
               <div className="space-y-2">
@@ -1214,8 +1243,8 @@ export default function AbiHubApp() {
                      <div className="flex items-center gap-3">
                        <div className="w-10 h-10 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center text-lg">{m.avatar}</div>
                        <div>
-                         <div className="text-sm font-bold text-white flex items-center gap-1.5">{m.name} {m.id === '4' && <span className="text-blue-400 text-[10px]">(Du)</span>}</div>
-                         <div className="text-[10px] text-slate-400">{m.email}</div>
+                         <div className="text-sm font-bold text-[var(--tw-text-main)] flex items-center gap-1.5">{m.name} {m.id === '4' && <span className="text-blue-400 text-[10px]">(Du)</span>}</div>
+                         <div className="text-[10px] text-[var(--tw-text-muted)]">{m.email}</div>
                          <div className="text-[10px] text-blue-400 mt-0.5">LKs: {m.lks}</div>
                        </div>
                      </div>
@@ -1223,7 +1252,7 @@ export default function AbiHubApp() {
                        {m.role === 'Ersteller' ? (
                          <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1"><Sparkles className="w-3 h-3"/> Ersteller</span>
                        ) : (
-                         <span className="bg-[#1C2538] text-slate-300 text-[10px] font-bold px-2 py-1 rounded border border-slate-700/50">Schüler</span>
+                         <span className="bg-[var(--tw-bg-elevated)] text-[var(--tw-text-muted)] text-[10px] font-bold px-2 py-1 rounded border border-[var(--tw-border-color)]/50">Schüler</span>
                        )}
                        <MoreVertical className="w-4 h-4 text-slate-500" />
                      </div>
