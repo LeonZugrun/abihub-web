@@ -142,6 +142,22 @@ export default function AbiHubApp() {
   const [ybFilter, setYbFilter] = useState<'Alle Beiträge' | 'Mit Fotos' | 'Nur Text'>('Alle Beiträge');
   const [ybOnlyPrint, setYbOnlyPrint] = useState(false);
   const [showPostModal, setShowPostModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [tempName, setTempName] = useState(userName);
+  const [tempQuote, setTempQuote] = useState(userQuote);
+  const [tempEmail, setTempEmail] = useState(userEmail);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setUserAvatar(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const [newPost, setNewPost] = useState<{content: string, author: string, withTime: boolean}>({content: '', author: 'Leon Hillger', withTime: false});
 
   // =========================================================================
@@ -206,12 +222,12 @@ export default function AbiHubApp() {
 
   const getThemeVars = () => {
     if (appMode === 'sellerie') return {
-      '--tw-bg-app': '#06130b',
-      '--tw-bg-card': '#0a1e12',
-      '--tw-bg-elevated': '#0e2a19',
-      '--tw-border-color': '#1b3d28',
-      '--tw-text-main': '#e2fbe9',
-      '--tw-text-muted': '#84cc9a'
+      '--tw-bg-app': '#021206',
+      '--tw-bg-card': '#05210e',
+      '--tw-bg-elevated': '#0a3016',
+      '--tw-border-color': '#165c2a',
+      '--tw-text-main': '#bbf7d0',
+      '--tw-text-muted': '#4ade80'
     };
     
     if (appMode === 'light') {
@@ -254,18 +270,22 @@ export default function AbiHubApp() {
     };
   };
 
+  const effectiveAccent = appMode === 'sellerie' ? 'green' : accentColor;
+  
+  const accentConfigs = {
+    blue: { base: 'bg-blue-600 text-blue-500 border-blue-500', grad: 'from-blue-500 to-blue-600', textLight: 'text-blue-100', textDark: 'text-blue-600' },
+    red: { base: 'bg-red-600 text-red-500 border-red-500', grad: 'from-red-500 to-red-600', textLight: 'text-red-100', textDark: 'text-red-600' },
+    purple: { base: 'bg-purple-600 text-purple-500 border-purple-500', grad: 'from-purple-500 to-purple-600', textLight: 'text-purple-100', textDark: 'text-purple-600' },
+    orange: { base: 'bg-orange-500 text-orange-500 border-orange-500', grad: 'from-orange-500 to-orange-600', textLight: 'text-orange-100', textDark: 'text-orange-600' },
+    green: { base: 'bg-emerald-600 text-emerald-500 border-emerald-500', grad: 'from-emerald-500 to-emerald-600', textLight: 'text-emerald-100', textDark: 'text-emerald-600' },
+    pink: { base: 'bg-pink-600 text-pink-500 border-pink-500', grad: 'from-pink-500 to-pink-600', textLight: 'text-pink-100', textDark: 'text-pink-600' },
+  };
 
-  const accentClasses = {
-    blue: 'bg-blue-600 text-blue-500 border-blue-500',
-    red: 'bg-red-600 text-red-500 border-red-500',
-    purple: 'bg-purple-600 text-purple-500 border-purple-500',
-    orange: 'bg-orange-500 text-orange-500 border-orange-500',
-    green: 'bg-emerald-600 text-emerald-500 border-emerald-500',
-    pink: 'bg-pink-600 text-pink-500 border-pink-500',
-  }[accentColor] || 'bg-blue-600 text-blue-500 border-blue-500';
-
+  const currentAccentConfig = (accentConfigs as any)[effectiveAccent] || accentConfigs.blue;
+  const accentClasses = currentAccentConfig.base;
   const accentBg = accentClasses.split(' ')[0];
   const accentText = accentClasses.split(' ')[1];
+
   const accentBorder = accentClasses.split(' ')[2];
 
   // =========================================================================
@@ -434,7 +454,7 @@ const BottomNavBar = () => (
                   <CalendarDays className="w-3.5 h-3.5" /> Alle Ferien
                 </button>
               </div>
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-[24px] p-5 shadow-xl relative overflow-hidden">
+              <div className={`bg-gradient-to-br ${currentAccentConfig.grad} rounded-[24px] p-5 shadow-xl relative overflow-hidden`}>
                 <div className="flex justify-between items-start mb-5">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-xl shadow-inner">
@@ -442,10 +462,10 @@ const BottomNavBar = () => (
                     </div>
                     <div>
                       <h4 className="text-lg font-bold text-[var(--tw-text-main)] leading-tight">Herbstferien</h4>
-                      <p className="text-[11px] text-blue-100 mt-0.5 font-medium">05. Okt. – 16. Okt. 2026</p>
+                      <p className={`text-[11px] ${currentAccentConfig.textLight} mt-0.5 font-medium`}>05. Okt. – 16. Okt. 2026</p>
                     </div>
                   </div>
-                  <div className="bg-white text-blue-600 text-[11px] font-bold px-3 py-1.5 rounded-full shadow-sm">
+                  <div className={`bg-white ${currentAccentConfig.textDark} text-[11px] font-bold px-3 py-1.5 rounded-full shadow-sm`}>
                     Noch 32 T.
                   </div>
                 </div>
@@ -1078,6 +1098,47 @@ const BottomNavBar = () => (
           </div>
         )}
 
+        {showProfileModal && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+             <div className={`${themeClasses.bgCardElevated} border ${themeClasses.border} rounded-[24px] w-full max-w-sm overflow-hidden shadow-2xl p-5`}>
+               <div className="flex justify-between items-center mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center"><Edit2 className="w-5 h-5 text-blue-400" /></div>
+                  <div>
+                    <h3 className="text-lg font-bold text-[var(--tw-text-main)]">Profil bearbeiten</h3>
+                  </div>
+                </div>
+                <button onClick={() => setShowProfileModal(false)} className="text-[var(--tw-text-muted)]"><Plus className="w-6 h-6 rotate-45" /></button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] text-[var(--tw-text-muted)] ml-1">Name</label>
+                  <input type="text" value={tempName} onChange={e => setTempName(e.target.value)} className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-4 py-3 text-sm text-[var(--tw-text-main)] focus:outline-none mt-1" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-[var(--tw-text-muted)] ml-1">Zitat</label>
+                  <input type="text" value={tempQuote} onChange={e => setTempQuote(e.target.value)} className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-4 py-3 text-sm text-[var(--tw-text-main)] focus:outline-none mt-1" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-[var(--tw-text-muted)] ml-1">E-Mail</label>
+                  <input type="email" value={tempEmail} onChange={e => setTempEmail(e.target.value)} className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-4 py-3 text-sm text-[var(--tw-text-main)] focus:outline-none mt-1" />
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-2 mt-6">
+                 <button onClick={() => setShowProfileModal(false)} className="px-4 py-2 rounded-xl text-blue-400 font-bold text-sm">Abbrechen</button>
+                 <button onClick={() => {
+                   setUserName(tempName);
+                   setUserQuote(tempQuote);
+                   setUserEmail(tempEmail);
+                   setShowProfileModal(false);
+                 }} className="bg-blue-600 text-white font-bold px-4 py-2 rounded-xl shadow-md">Speichern</button>
+              </div>
+             </div>
+          </div>
+        )}
+        
         {/* ----------------------------------------------------------------- */}
         {/* VIEW: EINSTELLUNGEN */}
         {/* ----------------------------------------------------------------- */}
@@ -1089,8 +1150,13 @@ const BottomNavBar = () => (
                <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 ${accentBg} rounded-full blur-[80px] opacity-20`} />
                
                <div className="relative">
-                 <div className={`w-20 h-20 rounded-full ${accentBg} flex items-center justify-center text-4xl shadow-xl z-10`}>{userAvatar}</div>
-                 <div className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 rounded-full border-2 border-[var(--tw-bg-app)] flex items-center justify-center cursor-pointer hover:scale-110 transition"><Camera className="w-3 h-3 text-white" /></div>
+                 <div className={`w-20 h-20 rounded-full ${accentBg} flex items-center justify-center text-4xl shadow-xl z-10 overflow-hidden`}>
+                   {userAvatar.startsWith('data:') ? <img src={userAvatar} className="w-full h-full object-cover" /> : userAvatar}
+                 </div>
+                 <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 rounded-full border-2 border-[var(--tw-bg-app)] flex items-center justify-center cursor-pointer hover:scale-110 transition">
+                   <Camera className="w-3 h-3 text-white" />
+                   <input type="file" id="avatar-upload" hidden accept="image/*" onChange={handleAvatarUpload} />
+                 </label>
                </div>
                
                <div className="mt-4 flex flex-col items-center">
@@ -1106,7 +1172,7 @@ const BottomNavBar = () => (
                </div>
 
                <div className="flex gap-3 w-full mt-5">
-                 <button className="flex-1 bg-[var(--tw-bg-elevated)] border border-[var(--tw-border-color)] text-[var(--tw-text-muted)] text-xs font-bold py-2.5 rounded-xl flex items-center justify-center gap-2"><Edit2 className="w-3.5 h-3.5"/> Profil</button>
+                 <button onClick={() => { setTempName(userName); setTempQuote(userQuote); setTempEmail(userEmail); setShowProfileModal(true); }} className="flex-1 bg-[var(--tw-bg-elevated)] border border-[var(--tw-border-color)] text-[var(--tw-text-muted)] text-xs font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 hover:brightness-[1.2] transition"><Edit2 className="w-3.5 h-3.5"/> Profil</button>
                  <button className="flex-1 bg-[#2C2622] border border-orange-500/30 text-orange-400 text-[11px] font-mono font-bold py-2.5 rounded-xl flex items-center justify-center gap-1.5"><Key className="w-3.5 h-3.5"/> {joinKey}</button>
                </div>
             </div>
