@@ -71,6 +71,7 @@ interface Member {
 // =========================================================================
 export default function AbiHubApp() {
   const [currentView, setCurrentView] = useState<'dashboard' | 'grades' | 'events' | 'yearbook' | 'settings' | 'members'>('dashboard');
+  const [particles, setParticles] = useState<{id: number, x: number, y: number}[]>([]);
 
   // Benutzer & Einstellungen
   const [userName, setUserName] = useState<string>('Leon Hillger');
@@ -278,7 +279,27 @@ export default function AbiHubApp() {
     );
   };
 
-  const BottomNavBar = () => (
+  
+  const handleTabClick = (viewId: any, e: React.MouseEvent) => {
+    setCurrentView(viewId);
+    if (appMode === 'sellerie') {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top;
+      
+      const newParticles = Array.from({length: 5}).map((_, i) => ({
+        id: Date.now() + i + Math.random(),
+        x: centerX + (Math.random() * 40 - 20),
+        y: centerY + (Math.random() * 20 - 10)
+      }));
+      setParticles(prev => [...prev, ...newParticles]);
+      setTimeout(() => {
+        setParticles(prev => prev.filter(p => !newParticles.find(n => n.id === p.id)));
+      }, 1000);
+    }
+  };
+
+const BottomNavBar = () => (
     <nav className={`fixed bottom-0 inset-x-0 h-[68px] ${themeClasses.bgApp}/95 backdrop-blur-lg border-t ${themeClasses.border} z-40 pb-safe`}>
       <div className="max-w-md mx-auto flex items-center justify-between h-full px-2">
         {[
@@ -292,7 +313,7 @@ export default function AbiHubApp() {
           return (
             <button
               key={item.id}
-              onClick={() => setCurrentView(item.id as any)}
+              onClick={(e) => handleTabClick(item.id, e)}
               className={`flex-1 flex flex-col items-center justify-center gap-1.5 transition-all duration-200 ${active ? accentText : 'text-slate-500 hover:text-[var(--tw-text-muted)]'}`}
             >
               <div className={`relative ${active ? 'scale-110' : ''}`}>
@@ -312,6 +333,24 @@ export default function AbiHubApp() {
   // =========================================================================
   return (
     <div className={`min-h-screen ${themeClasses.bgApp} ${themeClasses.textMain} font-sans selection:bg-blue-500/30`} style={getThemeVars() as React.CSSProperties}>
+
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes float-up-fade {
+          0% { transform: translateY(0) scale(0.5) rotate(0deg); opacity: 1; }
+          100% { transform: translateY(-100px) scale(1.5) rotate(20deg); opacity: 0; }
+        }
+        .celery-particle {
+          position: fixed;
+          pointer-events: none;
+          z-index: 9999;
+          animation: float-up-fade 1s ease-out forwards;
+          font-size: 24px;
+        }
+      `}} />
+      {particles.map(p => (
+        <div key={p.id} className="celery-particle" style={{ left: p.x, top: p.y }}>🥬</div>
+      ))}
+
       <TopAppBar />
 
       <main className="pt-20 pb-28 px-4 max-w-2xl mx-auto space-y-4">
