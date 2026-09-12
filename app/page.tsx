@@ -205,14 +205,6 @@ export default function AbiHubApp() {
   };
 
   const getThemeVars = () => {
-    if (appMode === 'light') return {
-      '--tw-bg-app': '#f8fafc',
-      '--tw-bg-card': '#ffffff',
-      '--tw-bg-elevated': '#f1f5f9',
-      '--tw-border-color': '#e2e8f0',
-      '--tw-text-main': '#0f172a',
-      '--tw-text-muted': '#64748b'
-    };
     if (appMode === 'sellerie') return {
       '--tw-bg-app': '#06130b',
       '--tw-bg-card': '#0a1e12',
@@ -221,11 +213,42 @@ export default function AbiHubApp() {
       '--tw-text-main': '#e2fbe9',
       '--tw-text-muted': '#84cc9a'
     };
+    
+    if (appMode === 'light') {
+      const palettesLight = {
+        blue: { app: '#f8fafc', card: '#ffffff', elevated: '#f1f5f9', border: '#e2e8f0' },
+        red: { app: '#fef2f2', card: '#ffffff', elevated: '#fee2e2', border: '#fecaca' },
+        purple: { app: '#faf5ff', card: '#ffffff', elevated: '#f3e8ff', border: '#e9d5ff' },
+        orange: { app: '#fff7ed', card: '#ffffff', elevated: '#ffedd5', border: '#fed7aa' },
+        green: { app: '#ecfdf5', card: '#ffffff', elevated: '#d1fae5', border: '#a7f3d0' },
+        pink: { app: '#fdf2f8', card: '#ffffff', elevated: '#fce7f3', border: '#fbcfe8' }
+      };
+      const pL = (palettesLight as any)[accentColor] || palettesLight.blue;
+      return {
+        '--tw-bg-app': pL.app,
+        '--tw-bg-card': pL.card,
+        '--tw-bg-elevated': pL.elevated,
+        '--tw-border-color': pL.border,
+        '--tw-text-main': '#0f172a',
+        '--tw-text-muted': '#64748b'
+      };
+    }
+    
+    // Dark mode (default)
+    const palettesDark = {
+      blue: { app: '#060913', card: '#0E1524', elevated: '#151E32', border: '#1E293B' },
+      red: { app: '#120505', card: '#1f0909', elevated: '#2c1111', border: '#3b1818' },
+      purple: { app: '#0b0512', card: '#13091f', elevated: '#1d112c', border: '#29183b' },
+      orange: { app: '#120805', card: '#1f0d09', elevated: '#2c1511', border: '#3b1f18' },
+      green: { app: '#05120a', card: '#091f11', elevated: '#112c1a', border: '#183b25' },
+      pink: { app: '#12050c', card: '#1f0916', elevated: '#2c1121', border: '#3b182d' }
+    };
+    const pD = (palettesDark as any)[accentColor] || palettesDark.blue;
     return {
-      '--tw-bg-app': '#060913',
-      '--tw-bg-card': '#0E1524',
-      '--tw-bg-elevated': '#151E32',
-      '--tw-border-color': '#1E293B',
+      '--tw-bg-app': pD.app,
+      '--tw-bg-card': pD.card,
+      '--tw-bg-elevated': pD.elevated,
+      '--tw-border-color': pD.border,
       '--tw-text-main': '#F8FAFC',
       '--tw-text-muted': '#94A3B8'
     };
@@ -1119,19 +1142,22 @@ const BottomNavBar = () => (
                 </div>
               </div>
 
+              {appMode !== 'sellerie' && (
               <div>
                  <p className="text-[11px] font-bold text-[var(--tw-text-main)] mb-2">Akzentfarbe</p>
                  <div className="flex gap-3">
                    {['blue', 'red', 'purple', 'orange', 'green', 'pink'].map(c => {
                      const bgMap = {blue: 'bg-blue-600', red: 'bg-red-600', purple: 'bg-purple-600', orange: 'bg-orange-500', green: 'bg-emerald-600', pink: 'bg-pink-600'};
                      return (
-                       <button key={c} onClick={() => setAccentColor(c)} className={`w-8 h-8 rounded-full ${(bgMap as any)[c]} flex items-center justify-center ${accentColor === c ? 'ring-2 ring-white ring-offset-2 ring-offset-[#131E35]' : ''}`}>
-                         {accentColor === c && <Check className="w-4 h-4 text-[var(--tw-text-main)]" />}
+                       <button key={c} onClick={() => setAccentColor(c)} className={`w-8 h-8 rounded-full ${(bgMap as any)[c]} flex items-center justify-center ${accentColor === c ? 'ring-2 ring-white ring-offset-2 ring-offset-[var(--tw-bg-card)]' : ''}`}>
+                         {accentColor === c && <Check className="w-4 h-4 text-white" />}
                        </button>
                      )
                    })}
                  </div>
               </div>
+              )}
+            </div>
             </div>
 
             {/* Konto & Sicherheit */}
