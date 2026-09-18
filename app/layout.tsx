@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AbiHub 2026",
+  title: "AbiHub",
   description: "Abitur-Dashboard, MSS Notenrechner & Abizeitung",
 };
 

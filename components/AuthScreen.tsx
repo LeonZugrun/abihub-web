@@ -136,8 +136,8 @@ export default function AuthScreen({
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 shadow-xl shadow-blue-500/20 mb-2 border border-blue-400/30">
             <GraduationCap className="w-9 h-9 text-white" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[var(--tw-text-main)] flex items-center justify-center gap-2">
-            AbiHub <span className="text-blue-500">2026</span>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[var(--tw-text-main)] flex items-center justify-center">
+            AbiHub
           </h1>
           <p className="text-xs text-[var(--tw-text-muted)] font-medium max-w-xs mx-auto">
             Das Portal für deinen Abiturjahrgang: Notenrechner, Termine, News & Abizeitung

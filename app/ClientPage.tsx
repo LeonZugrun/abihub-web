@@ -5,7 +5,7 @@ import {
   LayoutDashboard, GraduationCap, BookOpen, CalendarDays, Settings,
   Plus, ThumbsUp, Bookmark, Trash2, AlertTriangle, Check, User, Shield,
   Sparkles, MapPin, Image as ImageIcon, Download, Upload, Users, LogOut,
-  ChevronRight, Calendar, Clock, Edit2, Key, Mail, Lock, Camera, Palette, Moon, Sun, Monitor, Leaf, FileText, Info, CheckCircle2, UserPlus, MoreVertical, MessageSquare, School, Copy, X
+  ChevronRight, Calendar, Clock, Edit2, Key, Mail, Lock, Camera, Palette, Moon, Sun, Monitor, Leaf, FileText, Info, CheckCircle2, UserPlus, MoreVertical, MessageSquare, School, Copy, X, Crop
 } from 'lucide-react';
 import AuthScreen from '../components/AuthScreen';
 import CohortOnboarding from '../components/CohortOnboardingModal';
@@ -180,13 +180,15 @@ export default function AbiHubApp() {
   };
 
   const handleLogout = async () => {
-    if (confirm('Möchtest du dich wirklich von deinem Konto abmelden?')) {
+    try {
       await logoutUser();
-      setCurrentUser(null);
-      setCurrentCohort(null);
-      setAuthStatus('unauthenticated');
-      notify('Erfolgreich abgemeldet.');
+    } catch (err) {
+      console.error('Logout error', err);
     }
+    setCurrentUser(null);
+    setCurrentCohort(null);
+    setAuthStatus('unauthenticated');
+    notify('Erfolgreich abgemeldet.');
   };
 
   // =========================================================================
@@ -236,7 +238,7 @@ export default function AbiHubApp() {
     { id: 2, author: 'Frau Becker (Geschichte)', authorRole: 'Admin', avatar: 'F', content: '„Im Mittelalter gab es kein WLAN, aber dafür hatten die Leute damals noch Respekt vor Fristen!“', category: 'Zitate', votesCount: 37, votedUserIds: [], isSelectedForPrint: true, date: 'Vorgestern' },
   ]);
 
-  const [ybFilter, setYbFilter] = useState<'Alle Beiträge' | 'Mit Fotos' | 'Nur Text'>('Alle Beiträge');
+  const [ybFilter, setYbFilter] = useState<'Alle Beiträge' | '📸 Mit Fotos' | '✍️ Nur Text'>('Alle Beiträge');
   const [ybOnlyPrint, setYbOnlyPrint] = useState(false);
   const [showPostModal, setShowPostModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -245,18 +247,89 @@ export default function AbiHubApp() {
   const [tempQuote, setTempQuote] = useState(userQuote);
   const [tempEmail, setTempEmail] = useState(userEmail);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [cropScale, setCropScale] = useState(1);
+  const [cropOffsetX, setCropOffsetX] = useState(0);
+  const [cropOffsetY, setCropOffsetY] = useState(0);
+  const postImageInputRef = useRef<HTMLInputElement>(null);
+
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        setUserAvatar(event.target?.result as string);
+        setCropImageSrc(event.target?.result as string);
+        setCropScale(1);
+        setCropOffsetX(0);
+        setCropOffsetY(0);
+        setShowCropModal(true);
       };
       reader.readAsDataURL(file);
     }
+    e.target.value = '';
   };
 
-  const [newPost, setNewPost] = useState<{content: string, author: string, withTime: boolean}>({content: '', author: 'Leon Hillger', withTime: false});
+  const applyCrop = () => {
+    if (!cropImageSrc) return;
+    const img = new Image();
+    img.src = cropImageSrc;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 400;
+      canvas.height = 400;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, 400, 400);
+
+      ctx.save();
+      ctx.translate(200, 200);
+      ctx.scale(cropScale, cropScale);
+      ctx.translate(cropOffsetX * 2, cropOffsetY * 2);
+
+      const aspect = img.width / img.height;
+      let drawW = 400;
+      let drawH = 400;
+      if (aspect > 1) {
+        drawW = 400 * aspect;
+      } else {
+        drawH = 400 / aspect;
+      }
+      ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+      ctx.restore();
+
+      const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      setUserAvatar(croppedDataUrl);
+      setShowCropModal(false);
+      setCropImageSrc(null);
+      notify('Profilbild erfolgreich zugeschnitten und gespeichert!');
+    };
+  };
+
+  const renderAvatar = (avatar: string, imgClass = "w-full h-full object-cover", iconClass = "text-xl") => {
+    if (avatar && (avatar.startsWith('data:') || avatar.startsWith('http') || avatar.startsWith('blob:'))) {
+      return <img src={avatar} alt="Avatar" className={imgClass} />;
+    }
+    return <span className={iconClass}>{avatar || '🎓'}</span>;
+  };
+
+  const [newPost, setNewPost] = useState<{
+    content: string;
+    author: string;
+    withTime: boolean;
+    customDate: string;
+    customTime: string;
+    imageUrl?: string;
+  }>({
+    content: '',
+    author: userName,
+    withTime: false,
+    customDate: new Date().toISOString().split('T')[0],
+    customTime: '12:00',
+    imageUrl: undefined
+  });
 
   // =========================================================================
   // STATE: MITGLIEDER (MEMBERS)
@@ -337,7 +410,7 @@ export default function AbiHubApp() {
         green: { app: '#ecfdf5', card: '#ffffff', elevated: '#d1fae5', border: '#a7f3d0' },
         pink: { app: '#fdf2f8', card: '#ffffff', elevated: '#fce7f3', border: '#fbcfe8' }
       };
-      const pL = (palettesLight as any)[accentColor] || palettesLight.blue;
+      const pL = (palettesLight as any)[effectiveAccent] || palettesLight.blue;
       return {
         '--tw-bg-app': pL.app,
         '--tw-bg-card': pL.card,
@@ -357,7 +430,7 @@ export default function AbiHubApp() {
       green: { app: '#05120a', card: '#091f11', elevated: '#112c1a', border: '#183b25' },
       pink: { app: '#12050c', card: '#1f0916', elevated: '#2c1121', border: '#3b182d' }
     };
-    const pD = (palettesDark as any)[accentColor] || palettesDark.blue;
+    const pD = (palettesDark as any)[effectiveAccent] || palettesDark.blue;
     return {
       '--tw-bg-app': pD.app,
       '--tw-bg-card': pD.card,
@@ -375,7 +448,7 @@ export default function AbiHubApp() {
     red: { base: 'bg-red-600 text-red-500 border-red-500', grad: 'from-red-500 to-red-600', textLight: 'text-red-100', textDark: 'text-red-600' },
     purple: { base: 'bg-purple-600 text-purple-500 border-purple-500', grad: 'from-purple-500 to-purple-600', textLight: 'text-purple-100', textDark: 'text-purple-600' },
     orange: { base: 'bg-orange-500 text-orange-500 border-orange-500', grad: 'from-orange-500 to-orange-600', textLight: 'text-orange-100', textDark: 'text-orange-600' },
-    green: { base: 'bg-emerald-600 text-emerald-500 border-emerald-500', grad: 'from-emerald-500 to-emerald-600', textLight: 'text-emerald-100', textDark: 'text-emerald-600' },
+    green: { base: 'bg-emerald-600 text-emerald-400 border-emerald-500', grad: 'from-emerald-500 to-emerald-600', textLight: 'text-emerald-100', textDark: 'text-emerald-600' },
     pink: { base: 'bg-pink-600 text-pink-500 border-pink-500', grad: 'from-pink-500 to-pink-600', textLight: 'text-pink-100', textDark: 'text-pink-600' },
   };
 
@@ -484,7 +557,7 @@ const BottomNavBar = () => (
           <div className="w-12 h-12 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center animate-pulse">
             <GraduationCap className="w-7 h-7" />
           </div>
-          <div className="text-xs text-slate-400 font-medium">AbiHub 2026 wird vorbereitet...</div>
+          <div className="text-xs text-slate-400 font-medium">AbiHub wird vorbereitet...</div>
         </div>
       </div>
     );
@@ -517,7 +590,7 @@ const BottomNavBar = () => (
   }
 
   return (
-    <div className={`min-h-screen ${themeClasses.bgApp} ${themeClasses.textMain} font-sans selection:bg-blue-500/30`} style={themeStyles}>
+    <div className={`min-h-screen ${themeClasses.bgApp} ${themeClasses.textMain} font-sans selection:bg-[var(--tw-accent-color)]/30`} style={themeStyles}>
 
       {/* MODAL FÜR STUFEN-WECHSEL AUS DEN EINSTELLUNGEN */}
       {showCohortModal && currentUser && (
@@ -566,8 +639,8 @@ const BottomNavBar = () => (
           <div className="space-y-4 animate-fadeIn">
             {/* Profil Karte */}
             <div className={`${themeClasses.bgCard} border ${themeClasses.border} rounded-[20px] p-4 flex items-center gap-4 shadow-lg`}>
-              <div className={`w-14 h-14 rounded-full ${accentBg} flex items-center justify-center text-3xl shadow-md`}>
-                {userAvatar}
+              <div className={`w-14 h-14 rounded-full ${accentBg} flex items-center justify-center text-3xl shadow-md overflow-hidden shrink-0`}>
+                {renderAvatar(userAvatar, "w-full h-full object-cover", "text-3xl")}
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -633,7 +706,7 @@ const BottomNavBar = () => (
                   {[{v: 32, l: 'Tage'}, {v: 10, l: 'Std'}, {v: 20, l: 'Min'}, {v: 13, l: 'Sek'}].map((t, i) => (
                     <div key={i} className="bg-white/20 backdrop-blur-md rounded-2xl py-2 flex flex-col items-center justify-center border border-white/10 shadow-sm">
                       <span className="text-xl font-bold text-[var(--tw-text-main)] leading-none">{t.v}</span>
-                      <span className="text-[10px] text-blue-100 mt-1 font-medium">{t.l}</span>
+                      <span className={`text-[10px] ${currentAccentConfig.textLight} mt-1 font-medium`}>{t.l}</span>
                     </div>
                   ))}
                 </div>
@@ -827,7 +900,7 @@ const BottomNavBar = () => (
                       type="text" 
                       defaultValue={editingSubject?.name || ''}
                       id="fachname"
-                      className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-4 py-3 text-sm text-[var(--tw-text-main)] focus:outline-none focus:border-blue-500" 
+                      className={`w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-4 py-3 text-sm text-[var(--tw-text-main)] focus:outline-none focus:border-[var(--tw-accent-color)] transition`} 
                     />
                   </div>
 
@@ -836,14 +909,14 @@ const BottomNavBar = () => (
                       <label className="text-[10px] font-bold text-[var(--tw-text-muted)] block mb-2">Schnellauswahl:</label>
                       <div className="flex flex-wrap gap-2">
                         {['Mathematik', 'Deutsch', 'Englisch', 'Biologie'].map(f => (
-                          <button key={f} onClick={() => (document.getElementById('fachname') as HTMLInputElement).value = f} className="bg-[var(--tw-bg-elevated)] border border-[var(--tw-border-color)] text-[var(--tw-text-muted)] text-[11px] px-3 py-1.5 rounded-lg">{f}</button>
+                          <button key={f} onClick={() => (document.getElementById('fachname') as HTMLInputElement).value = f} className="bg-[var(--tw-bg-elevated)] border border-[var(--tw-border-color)] text-[var(--tw-text-muted)] hover:text-[var(--tw-text-main)] text-[11px] px-3 py-1.5 rounded-lg transition">{f}</button>
                         ))}
                       </div>
                     </div>
                   )}
 
-                  <label className="flex items-center gap-3 mt-4">
-                    <input type="checkbox" id="islk" defaultChecked={editingSubject?.isLk || false} className="w-5 h-5 rounded bg-[var(--tw-bg-elevated)] border-[var(--tw-border-color)] text-blue-600 focus:ring-0 focus:ring-offset-0" />
+                  <label className="flex items-center gap-3 mt-4 cursor-pointer">
+                    <input type="checkbox" id="islk" defaultChecked={editingSubject?.isLk || false} className="w-5 h-5 rounded bg-[var(--tw-bg-elevated)] border-[var(--tw-border-color)] accent-[var(--tw-accent-color)] focus:ring-0 focus:ring-offset-0 cursor-pointer" />
                     <span className="text-sm font-bold text-[var(--tw-text-main)]">Leistungskurs (LK - zählt doppelt)</span>
                   </label>
 
@@ -917,7 +990,7 @@ const BottomNavBar = () => (
                     
                     setIsAddModal(false);
                     notify('Fach gespeichert!');
-                  }} className={`flex-1 py-3 rounded-xl ${accentBg} text-[var(--tw-text-main)] font-bold text-sm`}>Speichern</button>
+                  }} className={`flex-1 py-3 rounded-xl ${accentBg} hover:brightness-110 text-white font-bold text-sm shadow-md transition`}>Speichern</button>
                 </div>
               </div>
             </div>
@@ -933,15 +1006,15 @@ const BottomNavBar = () => (
             <div className={`${themeClasses.bgCardElevated} rounded-xl p-1 flex gap-1 border ${themeClasses.border}`}>
               <button 
                 onClick={() => setEventsTab('calendar')} 
-                className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${eventsTab === 'calendar' ? 'bg-[var(--tw-bg-elevated)] text-blue-500 shadow-sm' : 'text-[var(--tw-text-muted)]'}`}
+                className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${eventsTab === 'calendar' ? `bg-[var(--tw-bg-elevated)] ${accentText} shadow-sm` : 'text-[var(--tw-text-muted)]'}`}
               >
-                Kalender & Termine (3)
+                Kalender & Termine ({events.length})
               </button>
               <button 
                 onClick={() => setEventsTab('news')}
-                className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${eventsTab === 'news' ? 'bg-[var(--tw-bg-elevated)] text-blue-500 shadow-sm' : 'text-[var(--tw-text-muted)]'}`}
+                className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${eventsTab === 'news' ? `bg-[var(--tw-bg-elevated)] ${accentText} shadow-sm` : 'text-[var(--tw-text-muted)]'}`}
               >
-                Nachrichten (2)
+                Nachrichten ({news.length})
               </button>
             </div>
 
@@ -952,7 +1025,7 @@ const BottomNavBar = () => (
                   {['Alle Termine', 'Prüfungen', 'Events & Ball', 'Fristen'].map(f => (
                     <button 
                       key={f} onClick={() => setEventFilter(f as any)}
-                      className={`text-xs font-bold px-3 py-1.5 rounded-lg border whitespace-nowrap transition ${eventFilter === f ? 'bg-[var(--tw-bg-elevated)] text-[var(--tw-text-main)] border-slate-500' : 'bg-transparent text-[var(--tw-text-muted)] border-[var(--tw-border-color)]'}`}
+                      className={`text-xs font-bold px-3 py-1.5 rounded-lg border whitespace-nowrap transition ${eventFilter === f ? `${accentBg} text-white border-transparent shadow-sm` : 'bg-transparent text-[var(--tw-text-muted)] border-[var(--tw-border-color)]'}`}
                     >
                       {f}
                     </button>
@@ -961,7 +1034,13 @@ const BottomNavBar = () => (
 
                 {/* Event Cards */}
                 <div className="space-y-3">
-                  {events.map(ev => (
+                  {events.filter(ev => {
+                    if (eventFilter === 'Alle Termine') return true;
+                    if (eventFilter === 'Prüfungen') return ev.category === 'Klausur';
+                    if (eventFilter === 'Events & Ball') return ev.category === 'Event' || ev.category === 'Treffen';
+                    if (eventFilter === 'Fristen') return ev.category === 'Frist';
+                    return true;
+                  }).map(ev => (
                     <div key={ev.id} className={`${themeClasses.bgCard} rounded-[20px] p-4 shadow-md border ${ev.category === 'Frist' ? 'border-orange-500/50' : 'border-slate-800'}`}>
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex gap-2">
@@ -972,7 +1051,7 @@ const BottomNavBar = () => (
                       </div>
                       <h4 className="text-base font-bold text-[var(--tw-text-main)] mb-2">{ev.title}</h4>
                       <div className="space-y-1 text-xs text-[var(--tw-text-muted)]">
-                        <div className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5 text-blue-400" /> {new Date(ev.date).toLocaleDateString('de-DE', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}</div>
+                        <div className="flex items-center gap-2"><Calendar className={`w-3.5 h-3.5 ${accentText}`} /> {new Date(ev.date).toLocaleDateString('de-DE', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}</div>
                         <div className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-[var(--tw-text-muted)]" /> {ev.location}</div>
                       </div>
                       {ev.notes && <p className="text-[11px] text-[var(--tw-text-muted)] mt-3">{ev.notes}</p>}
@@ -981,7 +1060,7 @@ const BottomNavBar = () => (
                 </div>
 
                 {(userRole === 'Ersteller' || userRole === 'Admin') && (<div className="fixed bottom-24 right-4 z-30">
-                  <button onClick={() => setShowEventModal(true)} className="bg-blue-500 hover:bg-blue-400 text-white font-bold px-5 py-3.5 rounded-2xl flex items-center gap-2 shadow-xl border border-blue-400/50">
+                  <button onClick={() => setShowEventModal(true)} className={`${accentBg} hover:brightness-110 text-white font-bold px-5 py-3.5 rounded-2xl flex items-center gap-2 shadow-xl border ${accentBorder}/50 transition`}>
                     <Plus className="w-5 h-5" /> Termin anlegen
                   </button>
                 </div>)}
@@ -995,10 +1074,10 @@ const BottomNavBar = () => (
                         {n.isImportant && <span className="bg-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider">Wichtig</span>}
                         <h4 className="text-sm font-bold text-[var(--tw-text-main)] leading-tight pr-4">{n.title}</h4>
                       </div>
-                      <Trash2 onClick={() => setNews(news.filter(x => x.id !== n.id))} className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                      <Trash2 onClick={() => setNews(news.filter(x => x.id !== n.id))} className="w-4 h-4 text-slate-500 flex-shrink-0 cursor-pointer hover:text-rose-400 transition" />
                     </div>
                     <p className="text-xs text-[var(--tw-text-muted)] leading-relaxed my-3">{n.content}</p>
-                    <div className="text-[10px] text-blue-400 flex justify-between items-end">
+                    <div className={`text-[10px] ${accentText} flex justify-between items-end`}>
                       <span>Verfasst von {n.author}</span>
                       <span className="text-slate-500 text-right w-24">{n.date}</span>
                     </div>
@@ -1006,7 +1085,7 @@ const BottomNavBar = () => (
                 ))}
 
                 {(userRole === 'Ersteller' || userRole === 'Admin') && (<div className="fixed bottom-24 right-4 z-30">
-                  <button onClick={() => setShowNewsModal(true)} className="bg-blue-500 hover:bg-blue-400 text-white font-bold px-5 py-3.5 rounded-2xl flex items-center gap-2 shadow-xl border border-blue-400/50">
+                  <button onClick={() => setShowNewsModal(true)} className={`${accentBg} hover:brightness-110 text-white font-bold px-5 py-3.5 rounded-2xl flex items-center gap-2 shadow-xl border ${accentBorder}/50 transition`}>
                     <Plus className="w-5 h-5" /> Nachricht verfassen
                   </button>
                 </div>)}
@@ -1037,7 +1116,7 @@ const BottomNavBar = () => (
                   <label className="text-[11px] font-bold text-[var(--tw-text-muted)] block mb-1">Datum & Uhrzeit:</label>
                   <div className="flex gap-2">
                     <div className="flex-1 bg-transparent border border-[var(--tw-border-color)] rounded-xl px-3 py-3 flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-blue-400" />
+                      <Calendar className={`w-4 h-4 ${accentText}`} />
                       <input type="date" value={newEvent.date} onChange={e=>setNewEvent({...newEvent, date: e.target.value})} className="bg-transparent text-sm text-[var(--tw-text-main)] w-full focus:outline-none" />
                     </div>
                     <div className="w-24 relative">
@@ -1058,7 +1137,7 @@ const BottomNavBar = () => (
                   <label className="text-[11px] font-bold text-[var(--tw-text-muted)] block mb-1">Kategorie:</label>
                   <div className="flex gap-2">
                     {['Klausur', 'Frist', 'Event', 'Treffen'].map(c => (
-                      <button key={c} onClick={()=>setNewEvent({...newEvent, category: c as any})} className={`flex-1 py-2 rounded-lg border text-[11px] font-bold ${newEvent.category===c ? 'bg-slate-700 border-slate-500 text-white' : 'bg-[var(--tw-bg-elevated)] border-[var(--tw-border-color)] text-[var(--tw-text-muted)]'}`}>{c}</button>
+                      <button key={c} onClick={()=>setNewEvent({...newEvent, category: c as any})} className={`flex-1 py-2 rounded-lg border text-[11px] font-bold transition ${newEvent.category===c ? `${accentBg} border-transparent text-white` : 'bg-[var(--tw-bg-elevated)] border-[var(--tw-border-color)] text-[var(--tw-text-muted)]'}`}>{c}</button>
                     ))}
                   </div>
                 </div>
@@ -1072,7 +1151,7 @@ const BottomNavBar = () => (
                   setEvents([...events, { id: Date.now().toString(), title: newEvent.title || 'Neuer Termin', date: newEvent.date || '', location: newEvent.location || '', category: newEvent.category || 'Event', notes: newEvent.notes }]);
                   setShowEventModal(false);
                   notify('Termin gespeichert!');
-                }} className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-bold text-sm">Speichern</button>
+                }} className={`flex-1 py-3 rounded-xl ${accentBg} hover:brightness-110 text-white font-bold text-sm shadow-md transition`}>Speichern</button>
               </div>
             </div>
           </div>
@@ -1106,7 +1185,7 @@ const BottomNavBar = () => (
                   setNews([{ id: Date.now().toString(), title: newNews.title||'', content: newNews.content||'', author: userName, date: 'Gerade eben', isImportant: newNews.isImportant||false }, ...news]);
                   setShowNewsModal(false);
                   notify('Nachricht gesendet!');
-                }} className="flex-1 py-3 rounded-xl bg-slate-700 text-[var(--tw-text-muted)] font-bold text-sm">Veröffentlichen</button>
+                }} className={`flex-1 py-3 rounded-xl ${accentBg} hover:brightness-110 text-white font-bold text-sm shadow-md transition`}>Veröffentlichen</button>
               </div>
             </div>
           </div>
@@ -1120,7 +1199,7 @@ const BottomNavBar = () => (
           <div className="space-y-4 animate-fadeIn">
             {/* Hero Card */}
             <div className={`${themeClasses.bgCard} border ${themeClasses.border} rounded-[20px] p-4 flex items-center gap-4 shadow-md`}>
-              <div className="w-12 h-12 rounded-2xl bg-blue-500 flex items-center justify-center shadow-lg"><BookOpen className="w-6 h-6 text-white" /></div>
+              <div className={`w-12 h-12 rounded-2xl ${accentBg} flex items-center justify-center shadow-lg`}><BookOpen className="w-6 h-6 text-white" /></div>
               <div>
                 <h3 className="text-base font-bold text-[var(--tw-text-main)]">Abizeitung & Momente</h3>
                 <p className="text-[11px] text-[var(--tw-text-muted)]">Sammelt Texte, Erinnerungen & Fotos für das gedruckte Abibuch!</p>
@@ -1132,7 +1211,7 @@ const BottomNavBar = () => (
               {['Alle Beiträge', '📸 Mit Fotos', '✍️ Nur Text'].map(f => (
                 <button 
                   key={f} onClick={() => setYbFilter(f as any)}
-                  className={`text-xs font-bold px-3.5 py-1.5 rounded-lg border whitespace-nowrap transition ${ybFilter === f ? 'bg-slate-700 text-white border-slate-500' : 'bg-transparent text-[var(--tw-text-muted)] border-[var(--tw-border-color)]'}`}
+                  className={`text-xs font-bold px-3.5 py-1.5 rounded-lg border whitespace-nowrap transition ${ybFilter === f ? `${accentBg} text-white border-transparent shadow-sm` : 'bg-transparent text-[var(--tw-text-muted)] border-[var(--tw-border-color)]'}`}
                 >
                   {f}
                 </button>
@@ -1140,26 +1219,41 @@ const BottomNavBar = () => (
             </div>
             
             <div className="flex justify-between items-center px-1">
-              <span className="text-[11px] text-[var(--tw-text-muted)] font-bold">{posts.length} Einträge</span>
-              <label className="flex items-center gap-2">
-                <input type="checkbox" checked={ybOnlyPrint} onChange={(e) => setYbOnlyPrint(e.target.checked)} className="w-4 h-4 rounded bg-transparent border-[var(--tw-border-color)] text-amber-500 focus:ring-0" />
+              <span className="text-[11px] text-[var(--tw-text-muted)] font-bold">
+                {posts.filter(p => {
+                  if (ybOnlyPrint && !p.isSelectedForPrint) return false;
+                  if (ybFilter === '📸 Mit Fotos') return Boolean(p.imageUrl);
+                  if (ybFilter === '✍️ Nur Text') return !p.imageUrl;
+                  return true;
+                }).length} Einträge
+              </span>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={ybOnlyPrint} onChange={(e) => setYbOnlyPrint(e.target.checked)} className="w-4 h-4 rounded bg-transparent border-[var(--tw-border-color)] text-amber-500 focus:ring-0 cursor-pointer" />
                 <span className="text-[11px] text-[var(--tw-text-muted)] font-medium">Nur fürs Abibuch markierte</span>
               </label>
             </div>
 
             {/* Posts List */}
             <div className="space-y-4">
-              {posts.filter(p => !ybOnlyPrint || p.isSelectedForPrint).map(post => {
+              {posts.filter(p => {
+                if (ybOnlyPrint && !p.isSelectedForPrint) return false;
+                if (ybFilter === '📸 Mit Fotos') return Boolean(p.imageUrl);
+                if (ybFilter === '✍️ Nur Text') return !p.imageUrl;
+                return true;
+              }).map(post => {
                 const hasVoted = post.votedUserIds.includes('user_me');
                 return (
                   <div key={post.id} className={`${themeClasses.bgCard} border border-orange-500/40 rounded-[20px] p-4 shadow-lg relative`}>
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-purple-900/60 flex items-center justify-center text-sm font-bold text-purple-200">
-                          {post.avatar}
+                        <div className="w-9 h-9 rounded-full bg-purple-900/60 flex items-center justify-center text-sm font-bold text-purple-200 overflow-hidden shrink-0">
+                          {renderAvatar(post.avatar, "w-full h-full object-cover", "text-sm")}
                         </div>
-                        <div className="text-sm font-bold text-[var(--tw-text-main)] flex items-center gap-2">
-                          {post.author}
+                        <div>
+                          <div className="text-sm font-bold text-[var(--tw-text-main)] flex items-center gap-2">
+                            {post.author}
+                          </div>
+                          {post.date && <div className="text-[10px] text-[var(--tw-text-muted)]">{post.date}</div>}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -1172,9 +1266,17 @@ const BottomNavBar = () => (
                       </div>
                     </div>
                     
-                    <p className="text-[15px] font-medium text-slate-200 leading-relaxed mb-4">
-                      {post.content}
-                    </p>
+                    {post.content && (
+                      <p className="text-[15px] font-medium text-slate-200 leading-relaxed mb-3">
+                        {post.content}
+                      </p>
+                    )}
+
+                    {post.imageUrl && (
+                      <div className="mb-4 overflow-hidden rounded-xl border border-[var(--tw-border-color)]/60 bg-black/40">
+                        <img src={post.imageUrl} alt="Beitragsbild" className="w-full max-h-80 object-contain mx-auto" />
+                      </div>
+                    )}
 
                     <div className="flex justify-between items-center">
                       <button onClick={() => {
@@ -1211,7 +1313,7 @@ const BottomNavBar = () => (
             </div>
 
             <div className="fixed bottom-24 right-4 z-30">
-              <button onClick={() => setShowPostModal(true)} className="bg-blue-500 hover:bg-blue-400 text-white font-bold px-5 py-3.5 rounded-2xl flex items-center gap-2 shadow-xl border border-blue-400/50">
+              <button onClick={() => setShowPostModal(true)} className={`${accentBg} hover:brightness-110 text-white font-bold px-5 py-3.5 rounded-2xl flex items-center gap-2 shadow-xl border ${accentBorder}/50 transition`}>
                 <ImageIcon className="w-5 h-5" /> Beitrag verfassen
               </button>
             </div>
@@ -1224,34 +1326,119 @@ const BottomNavBar = () => (
              <div className={`${themeClasses.bgCardElevated} border ${themeClasses.border} rounded-[24px] w-full max-w-sm overflow-hidden shadow-2xl p-5`}>
                <div className="flex justify-between items-center mb-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center"><Edit2 className="w-5 h-5 text-blue-400" /></div>
+                  <div className={`w-10 h-10 rounded-xl bg-[var(--tw-bg-elevated)] flex items-center justify-center`}><Edit2 className={`w-5 h-5 ${accentText}`} /></div>
                   <div>
                     <h3 className="text-lg font-bold text-[var(--tw-text-main)]">Neuer Beitrag</h3>
                     <p className="text-[11px] text-[var(--tw-text-muted)]">Text, Fotos & Erinnerungen</p>
                   </div>
                 </div>
-                <button onClick={() => setShowPostModal(false)} className="text-[var(--tw-text-muted)]"><Plus className="w-6 h-6 rotate-45" /></button>
+                <button onClick={() => setShowPostModal(false)} className="text-[var(--tw-text-muted)] hover:text-white transition"><Plus className="w-6 h-6 rotate-45" /></button>
               </div>
               <div className="space-y-4">
-                <textarea placeholder="Was möchtest du festhalten? (Zitat, Story, Panne, Erinnerung...)" rows={4} onChange={e=>setNewPost({...newPost, content: e.target.value})} className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-4 py-3 text-sm text-[var(--tw-text-main)] focus:outline-none resize-none" />
+                <textarea 
+                  placeholder="Was möchtest du festhalten? (Zitat, Story, Panne, Erinnerung...)" 
+                  rows={4} 
+                  value={newPost.content}
+                  onChange={e => setNewPost(prev => ({...prev, content: e.target.value}))} 
+                  className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-4 py-3 text-sm text-[var(--tw-text-main)] focus:outline-none resize-none focus:border-[var(--tw-accent-color)]" 
+                />
                 
-                <button className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-4 py-3 flex items-center justify-between text-[var(--tw-text-muted)]">
-                  <div className="flex items-center gap-3"><ImageIcon className="w-5 h-5 text-blue-400"/> <div className="text-left"><div className="text-sm font-bold">Bild hinzufügen</div><div className="text-[10px]">Foto aus Galerie wählen</div></div></div>
-                  <ChevronRight className="w-5 h-5" />
-                </button>
+                {/* Bild-Upload & Vorschau */}
+                <input 
+                  type="file" 
+                  ref={postImageInputRef} 
+                  accept="image/*" 
+                  hidden 
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        setNewPost(prev => ({ ...prev, imageUrl: ev.target?.result as string }));
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                    e.target.value = '';
+                  }} 
+                />
 
-                <div className="flex items-center justify-between px-2">
-                  <div className="flex items-center gap-2 text-sm text-[var(--tw-text-muted)]"><Calendar className="w-4 h-4"/> Datum & Uhrzeit hinzufügen (optional)</div>
-                  <div className={`w-10 h-6 rounded-full border border-[var(--tw-border-color)] ${newPost.withTime ? 'bg-blue-500' : 'bg-transparent'} relative transition-colors`} onClick={()=>setNewPost({...newPost, withTime: !newPost.withTime})}>
-                    <div className={`w-4 h-4 rounded-full bg-slate-400 absolute top-0.5 transition-all ${newPost.withTime ? 'left-5 bg-white' : 'left-1'}`} />
+                {newPost.imageUrl ? (
+                  <div className="relative rounded-xl overflow-hidden border border-[var(--tw-border-color)] bg-black/40 p-1">
+                    <img src={newPost.imageUrl} alt="Vorschau" className="w-full max-h-48 object-contain rounded-lg" />
+                    <button 
+                      type="button"
+                      onClick={() => setNewPost(prev => ({ ...prev, imageUrl: undefined }))}
+                      className="absolute top-2 right-2 p-1.5 bg-black/70 hover:bg-black text-white rounded-full transition shadow-md"
+                      title="Bild entfernen"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
+                ) : (
+                  <button 
+                    type="button"
+                    onClick={() => postImageInputRef.current?.click()} 
+                    className="w-full bg-transparent border border-[var(--tw-border-color)] hover:border-slate-500 rounded-xl px-4 py-3 flex items-center justify-between text-[var(--tw-text-muted)] hover:text-[var(--tw-text-main)] transition cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <ImageIcon className={`w-5 h-5 ${accentText}`}/> 
+                      <div className="text-left">
+                        <div className="text-sm font-bold text-[var(--tw-text-main)]">Bild hinzufügen</div>
+                        <div className="text-[10px] text-[var(--tw-text-muted)]">Foto aus Galerie oder Dateien wählen</div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                )}
+
+                {/* Datum & Uhrzeit Toggle & Felder */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center gap-2 text-sm text-[var(--tw-text-muted)]">
+                      <Calendar className="w-4 h-4"/> Datum & Uhrzeit hinzufügen (optional)
+                    </div>
+                    <div 
+                      className={`w-10 h-6 rounded-full border border-[var(--tw-border-color)] ${newPost.withTime ? accentBg : 'bg-[var(--tw-bg-elevated)]'} relative transition-colors cursor-pointer`} 
+                      onClick={() => setNewPost(prev => ({ ...prev, withTime: !prev.withTime }))}
+                    >
+                      <div className={`w-4 h-4 rounded-full absolute top-0.5 transition-all ${newPost.withTime ? 'left-5 bg-white' : 'left-1 bg-slate-400'}`} />
+                    </div>
+                  </div>
+
+                  {newPost.withTime && (
+                    <div className="grid grid-cols-2 gap-2 pt-1 animate-fadeIn">
+                      <div>
+                        <label className="text-[10px] font-bold text-[var(--tw-text-muted)] block mb-1">Datum</label>
+                        <input 
+                          type="date" 
+                          value={newPost.customDate} 
+                          onChange={(e) => setNewPost(prev => ({ ...prev, customDate: e.target.value }))}
+                          className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-3 py-2 text-xs text-[var(--tw-text-main)] focus:outline-none focus:border-[var(--tw-accent-color)]" 
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-[var(--tw-text-muted)] block mb-1">Uhrzeit</label>
+                        <input 
+                          type="time" 
+                          value={newPost.customTime} 
+                          onChange={(e) => setNewPost(prev => ({ ...prev, customTime: e.target.value }))}
+                          className="w-full bg-transparent border border-[var(--tw-border-color)] rounded-xl px-3 py-2 text-xs text-[var(--tw-text-main)] focus:outline-none focus:border-[var(--tw-accent-color)]" 
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="relative mt-2">
                   <label className="absolute -top-2 left-3 bg-[var(--tw-bg-elevated)] px-1 text-[10px] text-[var(--tw-text-muted)]">Name / Verfasser (optional)</label>
                   <div className="flex items-center gap-2 bg-transparent border border-[var(--tw-border-color)] rounded-xl px-4 py-3">
                     <User className="w-4 h-4 text-[var(--tw-text-muted)]" />
-                    <input type="text" defaultValue={userName} onChange={e=>setNewPost({...newPost, author: e.target.value})} className="w-full bg-transparent text-sm text-[var(--tw-text-main)] focus:outline-none" />
+                    <input 
+                      type="text" 
+                      value={newPost.author} 
+                      onChange={e => setNewPost(prev => ({...prev, author: e.target.value}))} 
+                      className="w-full bg-transparent text-sm text-[var(--tw-text-main)] focus:outline-none" 
+                    />
                   </div>
                 </div>
               </div>
@@ -1259,12 +1446,45 @@ const BottomNavBar = () => (
               <div className="flex justify-between items-center mt-6">
                 <span className="text-[11px] font-bold text-slate-500"><ThumbsUp className="w-3.5 h-3.5 inline mr-1" /> 0 Stimmen</span>
                 <div className="flex gap-2">
-                   <button onClick={() => setShowPostModal(false)} className="px-4 py-2 rounded-xl text-blue-400 font-bold text-sm">Abbrechen</button>
+                   <button onClick={() => setShowPostModal(false)} className={`px-4 py-2 rounded-xl ${accentText} hover:brightness-110 font-bold text-sm transition`}>Abbrechen</button>
                    <button onClick={() => {
-                     setPosts([{ id: Date.now(), author: newPost.author, authorRole: 'Schüler', avatar: 'L', content: newPost.content, category: 'Zitate', votesCount: 0, votedUserIds: [], isSelectedForPrint: false, date: 'Gerade eben' }, ...posts]);
+                     if (!newPost.content.trim() && !newPost.imageUrl) {
+                       notify('Bitte gib einen Text ein oder wähle ein Bild aus.');
+                       return;
+                     }
+                     const dateStr = newPost.withTime && newPost.customDate 
+                       ? `${new Date(newPost.customDate).toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' })}${newPost.customTime ? ` um ${newPost.customTime} Uhr` : ''}`
+                       : 'Gerade eben';
+
+                     setPosts([
+                       { 
+                         id: Date.now(), 
+                         author: newPost.author || userName, 
+                         authorRole: userRole, 
+                         avatar: userAvatar, 
+                         content: newPost.content, 
+                         imageUrl: newPost.imageUrl,
+                         category: 'Zitate', 
+                         votesCount: 0, 
+                         votedUserIds: [], 
+                         isSelectedForPrint: false, 
+                         date: dateStr 
+                       }, 
+                       ...posts
+                     ]);
                      setShowPostModal(false);
+                     setNewPost({
+                       content: '',
+                       author: userName,
+                       withTime: false,
+                       customDate: new Date().toISOString().split('T')[0],
+                       customTime: '12:00',
+                       imageUrl: undefined
+                     });
                      notify('Beitrag verfasst!');
-                   }} className="bg-[var(--tw-bg-elevated)] text-[var(--tw-text-muted)] font-bold px-4 py-2 rounded-xl border border-[var(--tw-border-color)]/50 flex items-center gap-1.5"><ImageIcon className="w-4 h-4"/> Beitrag verfassen</button>
+                   }} className={`${accentBg} hover:brightness-110 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-md transition`}>
+                     <ImageIcon className="w-4 h-4"/> Beitrag verfassen
+                   </button>
                 </div>
               </div>
             </div>
@@ -1276,7 +1496,7 @@ const BottomNavBar = () => (
              <div className={`${themeClasses.bgCardElevated} border ${themeClasses.border} rounded-[24px] w-full max-w-sm overflow-hidden shadow-2xl p-5`}>
                <div className="flex justify-between items-center mb-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center"><Edit2 className="w-5 h-5 text-blue-400" /></div>
+                  <div className={`w-10 h-10 rounded-xl bg-[var(--tw-bg-elevated)] flex items-center justify-center`}><Edit2 className={`w-5 h-5 ${accentText}`} /></div>
                   <div>
                     <h3 className="text-lg font-bold text-[var(--tw-text-main)]">Profil bearbeiten</h3>
                   </div>
@@ -1284,6 +1504,21 @@ const BottomNavBar = () => (
                 <button onClick={() => setShowProfileModal(false)} className="text-[var(--tw-text-muted)]"><Plus className="w-6 h-6 rotate-45" /></button>
               </div>
               
+              <div className="flex flex-col items-center mb-4">
+                <div className="relative">
+                  <div className={`w-16 h-16 rounded-full ${accentBg} flex items-center justify-center text-2xl shadow-md overflow-hidden`}>
+                    {renderAvatar(userAvatar, "w-full h-full object-cover", "text-2xl")}
+                  </div>
+                  <label htmlFor="modal-avatar-upload" className={`absolute bottom-0 right-0 w-5 h-5 ${accentBg} rounded-full border border-[var(--tw-bg-app)] flex items-center justify-center cursor-pointer hover:scale-110 transition shadow-sm`}>
+                    <Camera className="w-2.5 h-2.5 text-white" />
+                    <input type="file" id="modal-avatar-upload" hidden accept="image/*" onChange={handleAvatarUpload} />
+                  </label>
+                </div>
+                <label htmlFor="modal-avatar-upload" className={`text-[11px] font-bold ${accentText} mt-1.5 cursor-pointer hover:underline`}>
+                  Profilbild ändern & zuschneiden
+                </label>
+              </div>
+
               <div className="space-y-4">
                 <div>
                   <label className="text-[10px] text-[var(--tw-text-muted)] ml-1">Name</label>
@@ -1300,15 +1535,134 @@ const BottomNavBar = () => (
               </div>
               
               <div className="flex justify-end gap-2 mt-6">
-                 <button onClick={() => setShowProfileModal(false)} className="px-4 py-2 rounded-xl text-blue-400 font-bold text-sm">Abbrechen</button>
+                 <button onClick={() => setShowProfileModal(false)} className={`px-4 py-2 rounded-xl ${accentText} hover:brightness-110 font-bold text-sm transition`}>Abbrechen</button>
                  <button onClick={() => {
                    setUserName(tempName);
                    setUserQuote(tempQuote);
                    setUserEmail(tempEmail);
                    setShowProfileModal(false);
-                 }} className="bg-blue-600 text-white font-bold px-4 py-2 rounded-xl shadow-md">Speichern</button>
+                 }} className={`${accentBg} hover:brightness-110 text-white font-bold px-4 py-2 rounded-xl shadow-md transition`}>Speichern</button>
               </div>
              </div>
+          </div>
+        )}
+        
+        {/* MODAL: Profilbild zuschneiden & anpassen */}
+        {showCropModal && cropImageSrc && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+            <div className={`${themeClasses.bgCardElevated} border ${themeClasses.border} rounded-[28px] w-full max-w-sm overflow-hidden shadow-2xl p-5 animate-fadeIn`}>
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-9 h-9 rounded-xl ${accentBg}/20 flex items-center justify-center`}>
+                    <Crop className={`w-5 h-5 ${accentText}`} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-[var(--tw-text-main)]">Profilbild anpassen</h3>
+                    <p className="text-[10px] text-[var(--tw-text-muted)]">Zuschneiden & Ausrichtung wählen</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => { setShowCropModal(false); setCropImageSrc(null); }} 
+                  className="text-[var(--tw-text-muted)] hover:text-white transition"
+                >
+                  <Plus className="w-6 h-6 rotate-45" />
+                </button>
+              </div>
+
+              {/* Crop Circular Viewport */}
+              <div className="relative w-52 h-52 mx-auto my-2 rounded-full overflow-hidden border-4 border-white/20 shadow-2xl bg-black/80 flex items-center justify-center select-none">
+                <img 
+                  src={cropImageSrc} 
+                  alt="Crop preview" 
+                  className="max-w-none pointer-events-none transition-transform duration-75"
+                  style={{
+                    transform: `scale(${cropScale}) translate(${cropOffsetX}px, ${cropOffsetY}px)`,
+                    maxHeight: '200px',
+                    maxWidth: '200px',
+                    objectFit: 'contain'
+                  }}
+                />
+                <div className="absolute inset-0 rounded-full border border-white/10 pointer-events-none" />
+              </div>
+
+              {/* Sliders for Zoom and Position */}
+              <div className="space-y-3 mt-4 bg-[var(--tw-bg-elevated)] p-3.5 rounded-2xl border border-[var(--tw-border-color)]/60">
+                <div>
+                  <div className="flex justify-between text-[11px] font-bold text-[var(--tw-text-muted)] mb-1">
+                    <span>Zoom</span>
+                    <span className={accentText}>{Math.round(cropScale * 100)}%</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="0.5" 
+                    max="3" 
+                    step="0.05" 
+                    value={cropScale} 
+                    onChange={(e) => setCropScale(parseFloat(e.target.value))}
+                    className="w-full accent-blue-500 cursor-pointer h-1.5 bg-slate-700 rounded-lg"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <div className="flex justify-between text-[10px] font-bold text-[var(--tw-text-muted)] mb-1">
+                      <span>Horizontal</span>
+                      <span>{cropOffsetX}px</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="-120" 
+                      max="120" 
+                      step="2" 
+                      value={cropOffsetX} 
+                      onChange={(e) => setCropOffsetX(parseInt(e.target.value))}
+                      className="w-full accent-blue-500 cursor-pointer h-1.5 bg-slate-700 rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-[10px] font-bold text-[var(--tw-text-muted)] mb-1">
+                      <span>Vertikal</span>
+                      <span>{cropOffsetY}px</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="-120" 
+                      max="120" 
+                      step="2" 
+                      value={cropOffsetY} 
+                      onChange={(e) => setCropOffsetY(parseInt(e.target.value))}
+                      className="w-full accent-blue-500 cursor-pointer h-1.5 bg-slate-700 rounded-lg"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-center pt-1">
+                  <button 
+                    type="button" 
+                    onClick={() => { setCropScale(1); setCropOffsetX(0); setCropOffsetY(0); }} 
+                    className="text-[10px] font-bold text-[var(--tw-text-muted)] hover:text-[var(--tw-text-main)] underline cursor-pointer"
+                  >
+                    Zurücksetzen (Zentrieren)
+                  </button>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2.5 mt-4">
+                <button 
+                  onClick={() => { setShowCropModal(false); setCropImageSrc(null); }} 
+                  className="flex-1 py-2.5 rounded-xl border border-[var(--tw-border-color)] text-[var(--tw-text-muted)] font-bold text-xs hover:text-white transition"
+                >
+                  Abbrechen
+                </button>
+                <button 
+                  onClick={applyCrop} 
+                  className={`flex-1 py-2.5 rounded-xl ${accentBg} hover:brightness-110 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5`}
+                >
+                  <Check className="w-3.5 h-3.5" /> Bestätigen
+                </button>
+              </div>
+            </div>
           </div>
         )}
         
@@ -1324,9 +1678,9 @@ const BottomNavBar = () => (
                
                <div className="relative">
                  <div className={`w-20 h-20 rounded-full ${accentBg} flex items-center justify-center text-4xl shadow-xl z-10 overflow-hidden`}>
-                   {userAvatar.startsWith('data:') ? <img src={userAvatar} className="w-full h-full object-cover" /> : userAvatar}
+                   {renderAvatar(userAvatar, "w-full h-full object-cover", "text-4xl")}
                  </div>
-                 <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 w-6 h-6 bg-blue-500 rounded-full border-2 border-[var(--tw-bg-app)] flex items-center justify-center cursor-pointer hover:scale-110 transition">
+                 <label htmlFor="avatar-upload" className={`absolute bottom-0 right-0 w-6 h-6 ${accentBg} rounded-full border-2 border-[var(--tw-bg-app)] flex items-center justify-center cursor-pointer hover:scale-110 transition shadow-sm`}>
                    <Camera className="w-3 h-3 text-white" />
                    <input type="file" id="avatar-upload" hidden accept="image/*" onChange={handleAvatarUpload} />
                  </label>
@@ -1337,7 +1691,6 @@ const BottomNavBar = () => (
                    <h2 className="text-xl font-bold text-[var(--tw-text-main)]">{userName}</h2>
                    <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded">{userRole}</span>
                  </div>
-                 <p className="text-xs text-[var(--tw-text-muted)] mt-1">{userEmail}</p>
                </div>
 
                <div className="mt-4 bg-[var(--tw-bg-elevated)] border border-slate-800 rounded-xl px-4 py-2 w-full text-center">
@@ -1372,10 +1725,19 @@ const BottomNavBar = () => (
                     {id: 'sellerie', i: Leaf, l: 'Sellerie'}
                   ].map(m => {
                     const isActive = m.id === appMode;
-                    const activeBgMap = {blue: 'bg-blue-600 border-blue-500', red: 'bg-red-600 border-red-500', purple: 'bg-purple-600 border-purple-500', orange: 'bg-orange-500 border-orange-400', green: 'bg-emerald-600 border-emerald-500', pink: 'bg-pink-600 border-pink-500'};
-                    const activeBg = (activeBgMap as any)[accentColor] || 'bg-purple-600 border-purple-500';
+                    const activeBgMap: Record<string, string> = {
+                      blue: 'bg-blue-600 border-blue-500',
+                      red: 'bg-red-600 border-red-500',
+                      purple: 'bg-purple-600 border-purple-500',
+                      orange: 'bg-orange-500 border-orange-400',
+                      green: 'bg-emerald-600 border-emerald-500',
+                      pink: 'bg-pink-600 border-pink-500'
+                    };
+                    const activeBg = m.id === 'sellerie'
+                      ? 'bg-emerald-600 border-emerald-500'
+                      : ((activeBgMap as any)[effectiveAccent] || 'bg-emerald-600 border-emerald-500');
                     return (
-                    <button key={m.id} onClick={() => setAppMode(m.id as 'dark' | 'light' | 'system' | 'sellerie')} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-xl border ${isActive ? activeBg + ' text-white' : 'bg-transparent border-[var(--tw-border-color)] text-[var(--tw-text-muted)]'}`}>
+                    <button key={m.id} onClick={() => setAppMode(m.id as 'dark' | 'light' | 'system' | 'sellerie')} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-xl border transition ${isActive ? activeBg + ' text-white shadow-md' : 'bg-transparent border-[var(--tw-border-color)] text-[var(--tw-text-muted)] hover:text-[var(--tw-text-main)]'}`}>
                       <m.i className="w-4 h-4 mb-1" />
                       <span className="text-[10px] font-bold">{m.l}</span>
                     </button>
@@ -1402,13 +1764,13 @@ const BottomNavBar = () => (
             </div>
             <div className={`${themeClasses.bgCard} border ${themeClasses.border} rounded-[24px] p-5 shadow-lg`}>
                <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center"><Lock className="w-4 h-4 text-blue-400" /></div>
+                <div className="w-8 h-8 rounded-lg bg-[var(--tw-bg-elevated)] flex items-center justify-center"><Lock className={`w-4 h-4 ${accentText}`} /></div>
                 <h3 className="text-sm font-bold text-[var(--tw-text-main)]">Konto & Sicherheit</h3>
               </div>
               <div className="space-y-4">
                 <div className="flex items-center justify-between group cursor-pointer">
                   <div className="flex items-center gap-3">
-                    <Mail className="w-4 h-4 text-blue-400" />
+                    <Mail className={`w-4 h-4 ${accentText}`} />
                     <div>
                       <div className="text-sm font-bold text-[var(--tw-text-main)]">E-Mail-Adresse</div>
                       <div className="text-[11px] text-[var(--tw-text-muted)]">{userEmail}</div>
@@ -1419,7 +1781,7 @@ const BottomNavBar = () => (
                 <div className="h-px bg-slate-800 w-full" />
                 <div className="flex items-center justify-between group cursor-pointer">
                   <div className="flex items-center gap-3">
-                    <Key className="w-4 h-4 text-blue-400" />
+                    <Key className={`w-4 h-4 ${accentText}`} />
                     <div>
                       <div className="text-sm font-bold text-[var(--tw-text-main)]">Passwort ändern</div>
                       <div className="text-[11px] text-[var(--tw-text-muted)]">Passwort sicher aktualisieren</div>
@@ -1444,17 +1806,21 @@ const BottomNavBar = () => (
                     <div className="text-[11px] text-[var(--tw-text-muted)]">3 Leistungskurse • Abitur 2026</div>
                   </div>
                 </div>
-                <div className="h-px bg-slate-800 w-full" />
-                <div onClick={() => setCurrentView('members')} className="flex items-center justify-between group cursor-pointer">
-                  <div className="flex items-center gap-3">
-                    <Users className="w-4 h-4 text-[var(--tw-text-muted)]" />
-                    <div>
-                      <div className="text-sm font-bold text-[var(--tw-text-main)]">Stufenmitglieder & Freigaben</div>
-                      <div className="text-[11px] font-bold text-orange-500">1 Beitrittsanfrage(n) ausstehend</div>
+                {userRole === 'Ersteller' && (
+                  <>
+                    <div className="h-px bg-slate-800 w-full" />
+                    <div onClick={() => setCurrentView('members')} className="flex items-center justify-between group cursor-pointer">
+                      <div className="flex items-center gap-3">
+                        <Users className="w-4 h-4 text-[var(--tw-text-muted)]" />
+                        <div>
+                          <div className="text-sm font-bold text-[var(--tw-text-main)]">Stufenmitglieder & Freigaben</div>
+                          <div className="text-[11px] font-bold text-orange-500">{pendingMembers.length} Beitrittsanfrage(n) ausstehend</div>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-[var(--tw-text-main)] transition" />
                     </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-[var(--tw-text-main)] transition" />
-                </div>
+                  </>
+                )}
                 <div className="h-px bg-slate-800 w-full" />
                 <div className="flex items-center justify-between group cursor-pointer">
                   <div className="flex items-center gap-3">
@@ -1473,11 +1839,11 @@ const BottomNavBar = () => (
             <div className={`${themeClasses.bgCard} border ${themeClasses.border} rounded-[24px] p-5 shadow-lg space-y-4`}>
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="text-[10px] uppercase font-bold tracking-wider text-blue-400 mb-1">Deine Stufe</div>
+                  <div className={`text-[10px] uppercase font-bold tracking-wider ${accentText} mb-1`}>Deine Stufe</div>
                   <h3 className="text-base font-bold text-[var(--tw-text-main)]">{currentCohort?.school || 'Gymnasium Abi 2026'}</h3>
                   <p className="text-xs text-[var(--tw-text-muted)]">{currentCohort?.name || 'Abiturjahrgang 2026'} • {currentCohort?.state || 'Rheinland-Pfalz'}</p>
                 </div>
-                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30">
+                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full bg-[var(--tw-bg-elevated)] ${accentText} border ${accentBorder}/30`}>
                   {userRole}
                 </span>
               </div>
@@ -1503,7 +1869,7 @@ const BottomNavBar = () => (
                 onClick={() => setShowCohortModal(true)}
                 className="w-full py-2.5 px-4 rounded-xl bg-[var(--tw-bg-elevated)] hover:bg-white/10 border border-[var(--tw-border-color)] text-xs font-bold text-[var(--tw-text-main)] transition flex items-center justify-center gap-2"
               >
-                <School className="w-4 h-4 text-blue-400" /> Stufe wechseln oder neu anlegen
+                <School className={`w-4 h-4 ${accentText}`} /> Stufe wechseln oder neu anlegen
               </button>
             </div>
 
@@ -1538,7 +1904,7 @@ const BottomNavBar = () => (
                    <p className="text-[10px] text-[var(--tw-text-muted)]">Zugangsschlüssel für Mitschüler:</p>
                    <p className="text-sm font-bold text-orange-500 mt-0.5">{userRole === 'Ersteller' ? (currentCohort?.joinCode || joinKey) : '••••••'}</p>
                  </div>
-                 {userRole === 'Ersteller' && (<button onClick={() => { navigator.clipboard.writeText(currentCohort?.joinCode || joinKey); notify('Kopiert!'); }} className="bg-[var(--tw-bg-elevated)] border border-[var(--tw-border-color)] hover:brightness-[0.95] text-blue-400 text-[11px] font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition">
+                 {userRole === 'Ersteller' && (<button onClick={() => { navigator.clipboard.writeText(currentCohort?.joinCode || joinKey); notify('Kopiert!'); }} className={`bg-[var(--tw-bg-elevated)] border border-[var(--tw-border-color)] hover:brightness-[0.95] ${accentText} text-[11px] font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 transition`}>
                    <Key className="w-3.5 h-3.5" /> Kopieren
                  </button>)}
                </div>
@@ -1555,21 +1921,30 @@ const BottomNavBar = () => (
                     <div key={m.id} className="bg-[var(--tw-bg-elevated)] border border-slate-800 rounded-[20px] p-4">
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex items-center gap-3">
-                           <div className="w-10 h-10 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center text-lg">{m.avatar}</div>
+                           <div className={`w-10 h-10 rounded-full ${accentBg}/20 ${accentText} flex items-center justify-center text-lg overflow-hidden shrink-0`}>
+                             {renderAvatar(m.avatar, "w-full h-full object-cover", "text-lg")}
+                           </div>
                            <div>
                              <div className="text-sm font-bold text-[var(--tw-text-main)]">{m.name}</div>
-                             <div className="text-[10px] text-[var(--tw-text-muted)]">{m.email}</div>
-                             <div className="text-[10px] text-blue-400 mt-0.5">LKs: {m.lks}</div>
+                             <div className={`text-[10px] ${accentText} mt-0.5`}>LKs: {m.lks}</div>
                            </div>
                         </div>
                         <span className="bg-emerald-900/30 text-emerald-400 text-[9px] font-bold px-2 py-0.5 rounded border border-emerald-800">E-Mail bestätigt</span>
                       </div>
                       <div className="flex gap-2">
-                        <button className="flex-1 py-2.5 rounded-xl border border-[var(--tw-border-color)] text-rose-400 text-[11px] font-bold hover:bg-rose-950/20 transition">Ablehnen</button>
+                        <button 
+                          onClick={() => {
+                            setMembers(members.filter(x => x.id !== m.id));
+                            notify(`Anfrage von ${m.name} abgelehnt.`);
+                          }} 
+                          className="flex-1 py-2.5 rounded-xl border border-[var(--tw-border-color)] text-rose-400 text-[11px] font-bold hover:bg-rose-950/20 transition cursor-pointer"
+                        >
+                          Ablehnen
+                        </button>
                         <button onClick={() => {
                           setMembers(members.map(x => x.id === m.id ? {...x, isPending: false} : x));
                           notify(`${m.name} wurde genehmigt!`);
-                        }} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 hover:bg-emerald-500 transition"><Check className="w-3.5 h-3.5" /> Beitritt genehmigen</button>
+                        }} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 hover:bg-emerald-500 transition cursor-pointer"><Check className="w-3.5 h-3.5" /> Beitritt genehmigen</button>
                       </div>
                     </div>
                   ))}
@@ -1580,22 +1955,25 @@ const BottomNavBar = () => (
             {/* Active Members */}
             <div>
               <h3 className="text-sm font-bold text-[var(--tw-text-main)] flex items-center gap-2 mb-3">
-                <Users className="w-4 h-4 text-blue-400" /> Stufenliste ({activeMembers.length})
+                <Users className={`w-4 h-4 ${accentText}`} /> Stufenliste ({activeMembers.length})
               </h3>
               <div className="space-y-2">
                 {activeMembers.map(m => (
                   <div key={m.id} className={`${themeClasses.bgCard} border ${themeClasses.border} rounded-[20px] p-4 flex justify-between items-center shadow-sm`}>
                      <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center text-lg">{m.avatar}</div>
+                       <div className={`w-10 h-10 rounded-full ${accentBg}/20 ${accentText} flex items-center justify-center text-lg overflow-hidden shrink-0`}>
+                         {renderAvatar(m.avatar, "w-full h-full object-cover", "text-lg")}
+                       </div>
                        <div>
-                         <div className="text-sm font-bold text-[var(--tw-text-main)] flex items-center gap-1.5">{m.name} {m.id === '4' && <span className="text-blue-400 text-[10px]">(Du)</span>}</div>
-                         <div className="text-[10px] text-[var(--tw-text-muted)]">{m.email}</div>
-                         <div className="text-[10px] text-blue-400 mt-0.5">LKs: {m.lks}</div>
+                         <div className="text-sm font-bold text-[var(--tw-text-main)] flex items-center gap-1.5">{m.name} {m.id === '4' && <span className={`${accentText} text-[10px]`}>(Du)</span>}</div>
+                         <div className={`text-[10px] ${accentText} mt-0.5`}>LKs: {m.lks}</div>
                        </div>
                      </div>
                      <div className="flex items-center gap-2">
                        {m.role === 'Ersteller' ? (
                          <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1"><Sparkles className="w-3 h-3"/> Ersteller</span>
+                       ) : m.role === 'Admin' ? (
+                         <span className="bg-purple-600/30 text-purple-300 border border-purple-500/40 text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1"><Shield className="w-3 h-3"/> Admin</span>
                        ) : (
                          <span className="bg-[var(--tw-bg-elevated)] text-[var(--tw-text-muted)] text-[10px] font-bold px-2 py-1 rounded border border-[var(--tw-border-color)]/50">Schüler</span>
                        )}
@@ -1611,7 +1989,16 @@ const BottomNavBar = () => (
                                   setOpenMemberMenuId(null);
                                   notify(`${m.name} ist nun Admin.`);
                                }} className="w-full text-left px-4 py-3 text-[11px] font-bold text-[var(--tw-text-main)] hover:bg-white/5 transition flex items-center gap-2">
-                                 <Shield className="w-3.5 h-3.5 text-blue-400" /> Zum Admin befördern
+                                 <Shield className={`w-3.5 h-3.5 ${accentText}`} /> Zum Admin befördern
+                               </button>
+                             )}
+                             {userRole === 'Ersteller' && m.role === 'Admin' && (
+                               <button onClick={() => {
+                                  setMembers(members.map(member => member.id === m.id ? {...member, role: 'Schüler'} : member));
+                                  setOpenMemberMenuId(null);
+                                  notify(`Admin-Rechte für ${m.name} widerrufen.`);
+                               }} className="w-full text-left px-4 py-3 text-[11px] font-bold text-[var(--tw-text-main)] hover:bg-white/5 transition flex items-center gap-2">
+                                 <Users className={`w-3.5 h-3.5 ${accentText}`} /> Admin-Rechte entziehen
                                </button>
                              )}
                              {(userRole === 'Ersteller' || userRole === 'Admin') && m.role !== 'Ersteller' && (
